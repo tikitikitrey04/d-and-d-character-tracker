@@ -1,0 +1,362 @@
+:root {
+  color-scheme: light;
+}
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  background: #fafcf5;
+  color: var(--ink);
+  border-radius: 6px;
+  font-size: 11px;
+}
+.theme-toggle:hover {
+  background: #e8efdf;
+}
+.auth-form {
+  position: relative;
+}
+.auth-theme-toggle {
+  position: absolute;
+  top: 22px;
+  right: 25px;
+}
+.sidebar-theme {
+  margin-bottom: 18px;
+}
+.sidebar-theme .theme-toggle {
+  width: 100%;
+}
+@media (max-width: 650px) {
+  .sidebar-theme {
+    margin: 0 0 0 auto;
+  }
+  .sidebar-theme .theme-toggle {
+    padding: 7px;
+  }
+  .sidebar-theme .theme-toggle span {
+    display: none;
+  }
+  .sidebar .user-block {
+    margin-left: 0;
+  }
+  .auth-theme-toggle {
+    top: 13px;
+    right: 20px;
+  }
+  .auth-form {
+    padding-top: 65px;
+  }
+}
+
+@media screen {
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    color: #e8e8e8;
+    background: #181818;
+    --green: #d0d0d0;
+    --ink: #e8e8e8;
+    --muted: #b5b5b5;
+    --line: #484848;
+    --dark-surface: #242424;
+    --dark-soft: #303030;
+    --dark-input: #1c1c1c;
+  }
+  :root[data-theme="dark"] * {
+    border-color: var(--line);
+  }
+  :root[data-theme="dark"]
+    :is(
+      .panel,
+      .stat-card,
+      .ability,
+      .character-card,
+      .modal,
+      .auth-form,
+      .empty-vault,
+      .theme-toggle
+    ) {
+    background: var(--dark-surface);
+  }
+  :root[data-theme="dark"]
+    :is(
+      input:not([type="checkbox"]),
+      select,
+      textarea,
+      .journal-input,
+      .spell-picker .add-record textarea
+    ) {
+    background: var(--dark-input);
+    color: var(--ink);
+  }
+  :root[data-theme="dark"] :is(input, textarea)::placeholder {
+    color: #999999;
+  }
+  :root[data-theme="dark"] :is(.sidebar, .auth-story, .welcome-banner) {
+    background: #202020;
+  }
+  :root[data-theme="dark"] .sidebar-callout {
+    background: linear-gradient(145deg, #2e2e2e, #222222);
+  }
+  :root[data-theme="dark"]
+    :is(
+      .sidebar-link.active,
+      .segmented .active,
+      .secondary:hover,
+      .theme-toggle:hover,
+      .roll-stat:hover
+    ) {
+    background: #3e3e3e;
+    color: #d8d8d8;
+  }
+  :root[data-theme="dark"]
+    :is(
+      .brand-icon,
+      .avatar,
+      .empty-icon,
+      .new-character-card > div,
+      .builder-note,
+      .add-record,
+      .segmented,
+      .saving-throws button,
+      .skill-bonus,
+      .passive strong,
+      .ability input,
+      .stepper button,
+      .slot input[readonly],
+      .spell-level-heading,
+      .spell-level-heading .count,
+      .pill,
+      .count,
+      .sidebar-link span,
+      .welcome-banner .pill,
+      .preparation-counts > div,
+      .overview-slot-grid > div,
+      .spell-level-badge,
+      .record-main .spell-source-select
+    ) {
+    background: var(--dark-soft);
+    color: #c6c6c6;
+  }
+  :root[data-theme="dark"] :is(.spellbook-counters, .cast-feedback) {
+    background: #303030;
+    border-color: #5c5c5c;
+  }
+  :root[data-theme="dark"] .primary {
+    background: #505050;
+    color: #f3f3f3;
+    border-color: #757575;
+  }
+  :root[data-theme="dark"] .primary:hover {
+    background: #626262;
+  }
+  :root[data-theme="dark"] .secondary {
+    background: #313131;
+    color: #e0e0e0;
+  }
+  :root[data-theme="dark"]
+    :is(
+      .eyebrow,
+      .field > label,
+      .brand small,
+      .auth-copy h1 em,
+      .auth-copy > p:not(.eyebrow),
+      .feature-pills,
+      .auth-story footer,
+      .auth-note,
+      .rules-link,
+      .segmented button,
+      .sidebar-section,
+      .sidebar-callout p,
+      .sidebar-rules small,
+      .user-block small,
+      .welcome-banner p,
+      .empty-vault p,
+      .empty-vault small,
+      .vault-footer,
+      .class-label,
+      .card-body > p,
+      .card-stats,
+      .card-bottom,
+      .new-character-card > span,
+      .save-status,
+      .character-banner p:last-child,
+      .character-banner p > span,
+      .edition-badge,
+      .sheet-tabs button,
+      .stat-label,
+      .hp-value > span,
+      .ability > span,
+      .panel-title,
+      .helper,
+      .saving-throws label,
+      .skills-list small,
+      .passive,
+      .death-saves small,
+      .record-main p,
+      .empty-inline,
+      .journal-footer,
+      .sheet-footer,
+      .slot-remaining,
+      .spell-access-summary,
+      .spell-credits,
+      .spellbook-counters strong small,
+      .spellbook-counters > div > small,
+      .preparation-counts span,
+      .overview-spell-summary,
+      .overview-slots-title > span,
+      .overview-slot-grid dt,
+      .overview-slot-grid dd > span,
+      .overview-spell-entry summary small,
+      .overview-spell-entry p,
+      .overview-group-title > small,
+      .overview-cast-level
+    ) {
+    color: #b4b4b4;
+  }
+  :root[data-theme="dark"] .panel-title h3 {
+    color: #e8e8e8;
+  }
+  :root[data-theme="dark"] .sheet-tabs .active {
+    color: #d7d7d7;
+  }
+  :root[data-theme="dark"] .sheet-tabs .active:after {
+    background: #b2b2b2;
+  }
+  :root[data-theme="dark"] .save-status.unsaved {
+    color: #bebebe;
+  }
+  :root[data-theme="dark"] .hp-bar {
+    background: #3a3a3a;
+  }
+  :root[data-theme="dark"] .hp-bar span {
+    background: #a5a5a5;
+  }
+  :root[data-theme="dark"] .hp-controls button {
+    background: #3e3e3e;
+    color: #cfcfcf;
+    border-color: #696969;
+  }
+  :root[data-theme="dark"] .hp-controls .damage {
+    background: #353535;
+    color: #c3c3c3;
+    border-color: #575757;
+  }
+  :root[data-theme="dark"] .inspiration {
+    background: #333333;
+    border-color: #5b5b5b;
+  }
+  :root[data-theme="dark"] :is(.inspiration strong, .inspiration small) {
+    color: #c7c7c7;
+  }
+  :root[data-theme="dark"] .conditions button {
+    background: #353535;
+    color: #c1c1c1;
+  }
+  :root[data-theme="dark"] :is(.error, .connection-error) {
+    background: #303030;
+    color: #c8c8c8;
+    border-color: #5c5c5c;
+  }
+  :root[data-theme="dark"]
+    :is(
+      .danger,
+      .spellbook-counters .counter-over strong,
+      .spellbook-counters .counter-over > small
+    ) {
+    color: #b8b8b8;
+  }
+  :root[data-theme="dark"] .skill-dot {
+    background: #1d1d1d;
+    border-color: #959595;
+  }
+  :root[data-theme="dark"] .skill-dot.rank-1 {
+    background: #a5a5a5;
+  }
+  :root[data-theme="dark"] .skill-dot.rank-2 {
+    background: #5c5c5c;
+    color: white;
+  }
+  :root[data-theme="dark"] :is(.death-saves button, .slot-dots button) {
+    background: #1d1d1d;
+    border-color: #9a9a9a;
+  }
+  :root[data-theme="dark"] :is(.death-saves button.filled, .slot-dots .used) {
+    background: #b2b2b2;
+  }
+  :root[data-theme="dark"] .card-portrait {
+    background: radial-gradient(ellipse at 50% 100%, #4c4c4c, #242424);
+    color: #b0b0b0;
+  }
+  :root[data-theme="dark"] :is(.wizard, .sorcerer, .warlock) {
+    background: radial-gradient(ellipse at 50% 100%, #444444, #232323);
+    color: #b9b9b9;
+  }
+  :root[data-theme="dark"] :is(.bard, .rogue, .monk) {
+    background: radial-gradient(ellipse at 50% 100%, #4c4c4c, #2b2b2b);
+    color: #b6b6b6;
+  }
+  :root[data-theme="dark"] :is(.cleric, .paladin) {
+    background: radial-gradient(ellipse at 50% 100%, #505050, #2d2d2d);
+    color: #c1c1c1;
+  }
+  :root[data-theme="dark"] .portrait {
+    background: #363636;
+    color: #bcbcbc;
+  }
+  :root[data-theme="dark"] .level-badge {
+    background: #191919bd;
+    color: #d6d6d6;
+  }
+  :root[data-theme="dark"] .banner-art > svg:last-child {
+    background: #202020;
+  }
+  :root[data-theme="dark"] .banner-art {
+    color: #989898;
+  }
+  :root[data-theme="dark"] .modal-backdrop {
+    background: #090909c4;
+  }
+  :root[data-theme="dark"] .roll-toast {
+    background: #393939;
+    color: #e7e7e7;
+    border-color: #787878;
+  }
+  :root[data-theme="dark"] :is(input, select, textarea):focus {
+    outline-color: #b1b1b1;
+  }
+  :root[data-theme="dark"] ::selection {
+    background: #686868;
+    color: #fff;
+  }
+  :root[data-theme="dark"]
+    :is(
+      .hero-emblem,
+      .banner-art,
+      .tiny-stars,
+      .emblem-star,
+      .banner-art > span,
+      .portrait > span,
+      .heading-dot,
+      .roll-toast small,
+      .roll-toast button
+    ) {
+    color: #bdbdbd;
+  }
+  :root[data-theme="dark"] :is(button, a):focus-visible {
+    outline-color: #bdbdbd;
+  }
+  :root[data-theme="dark"]
+    :is(.error, .connection-error, .hp-controls .damage) {
+    color: #f1b7b7;
+  }
+}
+
+@media print {
+  :root {
+    color-scheme: light !important;
+  }
+}
