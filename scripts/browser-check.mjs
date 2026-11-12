@@ -15,7 +15,14 @@ const server = app.listen(0, "127.0.0.1");
 await new Promise((resolve) => server.once("listening", resolve));
 let browser;
 try {
-  browser = await chromium.launch({ channel: "chrome", headless: true });
+  browser = await chromium.launch({
+    channel: "chrome",
+    headless: true,
+    args: [
+      "--host-resolver-rules=MAP character-keeper.test 127.0.0.1",
+      "--no-proxy-server",
+    ],
+  });
   const context = await browser.newContext({
     viewport: { width: 1440, height: 1050 },
     colorScheme: "light",
@@ -24,7 +31,12 @@ try {
   const errors = [];
   mkdirSync("artifacts", { recursive: true });
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto(`http://127.0.0.1:${server.address().port}`);
+  await page.goto(`http://character-keeper.test:${server.address().port}`);
+  assert.equal(await page.evaluate(() => window.isSecureContext), false);
+  assert.equal(
+    await page.evaluate(() => typeof crypto.randomUUID),
+    "undefined",
+  );
   assert.equal(await page.locator("html").getAttribute("data-theme"), "light");
   await page
     .getByRole("button", { name: "Switch to dark theme", exact: true })
@@ -61,7 +73,9 @@ try {
       },
     });
   });
-  await privatePage.goto(`http://127.0.0.1:${server.address().port}`);
+  await privatePage.goto(
+    `http://character-keeper.test:${server.address().port}`,
+  );
   await privatePage.waitForFunction(
     () => document.documentElement.dataset.theme === "dark",
   );

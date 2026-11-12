@@ -66,7 +66,8 @@ async function api(path, options = {}) {
   if (!response.ok) throw new Error(data.error || "Something went wrong.");
   return data;
 }
-const uid = () => crypto.randomUUID();
+import { newId } from "../shared/id.mjs";
+const uid = newId;
 function Field({ label, children, ...props }) {
   const id = useId();
   return (

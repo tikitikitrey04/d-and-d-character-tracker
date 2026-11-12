@@ -1,0 +1,19 @@
+services:
+  app:
+    build: .
+    ports:
+      - "${APP_BIND_ADDRESS:-0.0.0.0}:${APP_PORT:-3001}:3001"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3001"
+      # Local-network HTTP. Set true only when accessing through HTTPS.
+      SECURE_COOKIES: "${SECURE_COOKIES:-false}"
+    volumes:
+      - keeper-data:/app/data
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 20s
+
+volumes:
+  keeper-data:

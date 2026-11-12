@@ -11,11 +11,12 @@ import { validateCharacter } from "../shared/character.mjs";
 import { normalizeCharacterSlots } from "../shared/slots.mjs";
 import { preparationIncreaseError } from "../shared/preparation.mjs";
 import { weaponChangeError } from "../shared/weapons.mjs";
+import { secureCookiesFromEnv } from "./config.mjs";
 const scrypt = promisify(scryptCallback);
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 export function createApp({
   databasePath = "data/keeper.sqlite",
-  secureCookies = process.env.NODE_ENV === "production",
+  secureCookies = secureCookiesFromEnv(),
 } = {}) {
   const db = new DatabaseSync(databasePath);
   db.exec(
@@ -23,6 +24,10 @@ export function createApp({
   );
   const app = express();
   app.disable("x-powered-by");
+  app.get("/healthz", (req, res) => {
+    db.prepare("SELECT 1").get();
+    res.set("Cache-Control", "no-store").json({ ok: true });
+  });
   app.use(express.json({ limit: "5mb" }));
   app.use("/api", (req, res, next) => {
     res.set("Cache-Control", "no-store");

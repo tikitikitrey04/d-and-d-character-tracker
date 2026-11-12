@@ -7,6 +7,7 @@ import {
   spellDetails,
 } from "../shared/spells.mjs";
 import SpellAttribution from "./SpellAttribution.jsx";
+import { newId } from "../shared/id.mjs";
 import { preparationIncreaseError } from "../shared/preparation.mjs";
 
 export default function SpellPicker({ character, items, onChange }) {
@@ -77,7 +78,7 @@ export default function SpellPicker({ character, items, onChange }) {
       (mode === "catalog" && !selected)
     )
       return;
-    onChange([...items, { ...candidate, id: crypto.randomUUID() }]);
+    onChange([...items, { ...candidate, id: newId() }]);
     resetSelection();
     setCustomName("");
     setCustomDetail("");

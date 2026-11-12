@@ -1,0 +1,13 @@
+.git
+.agents
+.codex
+.aws
+node_modules
+dist
+/data
+/backups
+/artifacts
+.env
+.env.*
+*.log
+tests

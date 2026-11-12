@@ -15,6 +15,75 @@ On Windows PowerShell, use `npm.cmd` if script execution policy blocks `npm`.
 
 Open **http://127.0.0.1:5173**. Vite forwards API requests to the Express server on port 3001. Register an account to begin; no seeded accounts or passwords are included.
 
+## Run with Docker on your local network
+
+Install/start **Docker Desktop with Linux containers** (or Docker Engine with Compose on Linux), then run from this repository:
+
+```sh
+docker compose up --build -d
+```
+
+Open **http://localhost:3001** on the Docker host. On another computer, phone, or tablet on the same network, open **http://YOUR-HOST-LAN-IP:3001**. Use the host computer’s LAN address, not `localhost` or a container IP. On Windows, run `ipconfig` and look for your active Ethernet/Wi-Fi IPv4 address. A DHCP reservation keeps that address stable.
+
+The container serves both the built React app and API on port 3001, listens on all host interfaces through the published port, runs as a non-root user, restarts automatically while Docker is running, and has a `/healthz` health check. No Node/npm installation is needed on the host. Browser-generated IDs work over plain HTTP LAN addresses as well as HTTPS/localhost.
+
+### Ports and local HTTP
+
+Compose defaults to `APP_BIND_ADDRESS=0.0.0.0`, `APP_PORT=3001`, and `SECURE_COOKIES=false` so sign-in works over local-network HTTP even though the container runs in production mode. HttpOnly and SameSite cookies and same-origin mutation protection remain enabled. Outside Compose, production cookies remain Secure by default. Use this HTTP setup on a trusted local network; an Internet/HTTPS deployment needs its own TLS/proxy configuration and Secure cookies.
+
+To change the published port, create a `.env` file beside `compose.yaml`:
+
+```dotenv
+APP_PORT=8080
+```
+
+Then run `docker compose up -d` and visit port 8080 instead. To restrict access to the host only, set `APP_BIND_ADDRESS=127.0.0.1`. Leave it at `0.0.0.0` for other devices.
+
+If the host opens the app but other devices cannot, confirm they are on the same network and allow inbound TCP traffic on the chosen port in the host firewall. On Windows **Private** networks, the following command in an administrator PowerShell allows only local-subnet clients:
+
+```powershell
+New-NetFirewallRule -DisplayName "Character Keeper LAN" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 3001 -RemoteAddress LocalSubnet -Profile Private
+```
+
+Use your configured port if different. Guest Wi-Fi/client isolation can prevent device-to-device access. Docker Desktop must remain running for the app to be available.
+
+### Persistent accounts and characters
+
+Docker stores SQLite files in the named `keeper-data` volume mounted at `/app/data`. Accounts, sessions, and characters survive container restarts, rebuilds, and `docker compose down`. The volume starts with a new database; your existing host `data/` folder is not automatically imported. Avoid `docker compose down --volumes` unless you intend to delete Docker’s stored data.
+
+To import existing local accounts **before using a fresh Docker database**, stop the local Node server so SQLite and its WAL files are consistent. Keep a backup of your host `data/` directory. Build/create the container without starting it, copy the entire directory, and fix ownership:
+
+```sh
+docker compose build
+docker compose create
+docker compose cp ./data/. app:/app/data/
+docker compose run --rm --no-deps --user root app chown -R node:node /app/data
+docker compose up -d
+```
+
+These import commands replace files in the Docker database directory; do not run them over a Docker database containing accounts/characters you need to retain. If a container is already running, stop it first with `docker compose stop`.
+
+To back up Docker data while the app is stopped:
+
+```sh
+docker compose stop
+docker compose cp app:/app/data ./backups
+docker compose start
+```
+
+The host `data/`, `backups/`, `.env`, generated artifacts, and Git metadata are excluded from the image build context. The bundled source spell catalog is included.
+
+### Manage the container
+
+```sh
+docker compose ps                  # status and health
+docker compose logs -f app         # server logs
+docker compose up --build -d       # rebuild after source changes
+docker compose stop               # stop, keep container/data
+docker compose start              # start again
+docker compose down               # remove container/network, keep data volume
+```
+
 ## Included
 
 - Email/password registration and sign-in, scrypt password hashes, expiring HTTP-only sessions, sign-out, login rate limiting, and same-origin mutation checks.
@@ -100,6 +169,6 @@ npm start
 
 Run `npm run test:browser` to test the full player flow in an installed Google Chrome. It uses an isolated in-memory database and writes desktop/mobile screenshots to the ignored `artifacts/` directory.
 
-The production server serves the built app and API together at **http://127.0.0.1:3001**. `PORT` and `HOST` configure the listener. For remote use, deploy behind HTTPS, set `NODE_ENV=production` for Secure session cookies, and provide persistent storage for `data/`. The default listener is local to this computer. Keep the production service same-origin; review reverse-proxy and rate-limiting configuration before exposing it publicly. Running multiple server instances requires shared session/data storage and a shared rate limiter.
+The production server serves the built app and API together at **http://127.0.0.1:3001**. `PORT` and `HOST` configure the listener. Outside Docker, the default listener is local to this computer. `NODE_ENV=production` defaults to Secure session cookies; `SECURE_COOKIES=true` or `false` explicitly sets that flag. Compose provides the LAN HTTP configuration described above. Keep the service same-origin; Internet deployments require HTTPS and appropriate trusted reverse-proxy/rate-limiting configuration. Running multiple server instances requires shared session/data storage and a shared rate limiter.
 
-The integration tests cover registration, login, sessions/logout, character CRUD, validation, cross-account isolation, and mutation protection. The SQLite API in Node.js 24 may emit an experimental-feature warning.
+The integration tests cover registration, login, sessions/logout, character CRUD, validation, cross-account isolation, mutation protection, cookie configuration, health checks, and LAN-compatible IDs. The browser checks run through a mapped non-localhost HTTP hostname, verifying the full player flow when `crypto.randomUUID()` is unavailable. The SQLite API in Node.js 24 may emit an experimental-feature warning.

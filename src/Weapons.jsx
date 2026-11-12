@@ -19,6 +19,7 @@ import {
   validateWeapon,
 } from "../shared/weapons.mjs";
 import WeaponAttribution from "./WeaponAttribution.jsx";
+import { newId } from "../shared/id.mjs";
 
 const signed = (n) => (n >= 0 ? `+${n}` : String(n));
 const groups = [
@@ -221,7 +222,7 @@ function WeaponPicker({ character: c, onChange }) {
     e.preventDefault();
     if (!candidate || invalid || limitError || (c.weapons || []).length >= 200)
       return;
-    onChange([...(c.weapons || []), { ...candidate, id: crypto.randomUUID() }]);
+    onChange([...(c.weapons || []), { ...candidate, id: newId() }]);
     setSelected("");
     setDraft(blank());
     setDescription(null);
