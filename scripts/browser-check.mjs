@@ -100,8 +100,78 @@ try {
     await page.getByRole("button", { name: "Admin logs", exact: true }).count(),
     0,
   );
+  assert.equal(
+    await page.getByRole("button", { name: "Admin bugs", exact: true }).count(),
+    0,
+  );
+  await page.getByRole("button", { name: "Report a bug", exact: true }).click();
+  await page
+    .getByLabel("Title", { exact: true })
+    .fill("Spell cast button is missing");
+  await page
+    .getByLabel("What went wrong?")
+    .fill(
+      "Expected a cast button. Found <script>window.bugScriptRan=true</script> text instead.",
+    );
+  await page
+    .getByLabel("Steps to reproduce (optional)")
+    .fill("1. Open the character\n2. Open Overview");
+  await page
+    .getByRole("button", { name: "Submit bug report", exact: true })
+    .click();
+  await page
+    .getByText("Bug report submitted. Thank you!", { exact: true })
+    .waitFor();
+  await page
+    .getByRole("heading", { name: "Spell cast button is missing", exact: true })
+    .waitFor();
+  assert.equal(await page.evaluate(() => window.bugScriptRan), undefined);
+  assert.equal(await page.locator(".bug-card script").count(), 0);
+  await page.screenshot({ path: "artifacts/bug-report-desktop.png" });
+  await page
+    .getByRole("button", { name: "Back to characters", exact: true })
+    .click();
   setAdmin(db, "robin@example.com", true, audit);
   await page.reload();
+  await page.getByRole("button", { name: "Admin bugs", exact: true }).click();
+  await page
+    .getByRole("heading", { name: "Spell cast button is missing", exact: true })
+    .waitFor();
+  await page.getByText(/Reported by Robin/).waitFor();
+  await page
+    .getByLabel("Status for Spell cast button is missing", { exact: true })
+    .selectOption("in_progress");
+  await page.getByText("Report status updated.", { exact: true }).waitFor();
+  await page
+    .getByLabel("Report status", { exact: true })
+    .selectOption("resolved");
+  await page
+    .getByText("No bug reports match this filter.", { exact: true })
+    .waitFor();
+  await page
+    .getByLabel("Report status", { exact: true })
+    .selectOption("in_progress");
+  await page
+    .getByRole("heading", { name: "Spell cast button is missing", exact: true })
+    .waitFor();
+  await page
+    .getByLabel("Status for Spell cast button is missing", { exact: true })
+    .selectOption("resolved");
+  await page
+    .getByText("No bug reports match this filter.", { exact: true })
+    .waitFor();
+  await page
+    .getByLabel("Report status", { exact: true })
+    .selectOption("resolved");
+  await page
+    .getByRole("heading", { name: "Spell cast button is missing", exact: true })
+    .waitFor();
+  await page.screenshot({ path: "artifacts/admin-bugs-desktop.png" });
+  await page.getByRole("button", { name: "Report a bug", exact: true }).click();
+  await page
+    .locator(".bug-card .pill")
+    .getByText("Resolved", { exact: true })
+    .waitFor();
   await page
     .getByRole("button", { name: "Admin logs", exact: true })
     .first()
@@ -121,10 +191,22 @@ try {
     .getByRole("button", { name: "Back to characters", exact: true })
     .click();
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByLabel("Navigate", { exact: true }).selectOption("bugs");
   await page
-    .getByRole("button", { name: "Admin logs", exact: true })
-    .last()
-    .click();
+    .getByRole("heading", { name: "Spell cast button is missing", exact: true })
+    .waitFor();
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  );
+  await page.screenshot({ path: "artifacts/admin-bugs-mobile.png" });
+  await page.getByLabel("Navigate", { exact: true }).selectOption("report");
+  await page
+    .getByRole("heading", { name: "Report a bug", exact: true })
+    .waitFor();
+  await page.screenshot({ path: "artifacts/bug-report-mobile.png" });
+  await page.getByLabel("Navigate", { exact: true }).selectOption("logs");
   await page
     .getByRole("cell", { name: "admin.granted", exact: true })
     .waitFor();
@@ -1011,7 +1093,7 @@ try {
   assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
   assert.deepEqual(errors, []);
   console.log(
-    "Browser checks passed: admin logs on desktop/mobile, player accounts, spell and weapon management, casting and attack resource tracking, all six mobile tabs, dark/light themes, and Letter/A4 PDF export.",
+    "Browser checks passed: bug reporting and admin status updates on desktop/mobile, admin logs, player accounts, spell and weapon management, casting and attack resource tracking, all six mobile tabs, dark/light themes, and Letter/A4 PDF export.",
   );
 } finally {
   if (browser) await browser.close();

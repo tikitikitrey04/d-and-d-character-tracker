@@ -13,6 +13,7 @@ import { preparationIncreaseError } from "../shared/preparation.mjs";
 import { weaponChangeError } from "../shared/weapons.mjs";
 import { secureCookiesFromEnv } from "./config.mjs";
 import { initializeAudit } from "./audit.mjs";
+import { registerBugRoutes } from "./bugs.mjs";
 const scrypt = promisify(scryptCallback);
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 export function createApp({
@@ -45,6 +46,10 @@ export function createApp({
         "PUT /api/characters/:id": "character.updated",
         "DELETE /api/characters/:id": "character.deleted",
         "GET /api/admin/logs": "admin.logs",
+        "POST /api/bugs": "bug.submitted",
+        "GET /api/bugs": "bugs.listed",
+        "GET /api/admin/bugs": "admin.bugs.listed",
+        "PATCH /api/admin/bugs/:id": "bug.status.updated",
       };
       const event =
         route === "/api/auth/:action" &&
@@ -330,6 +335,7 @@ export function createApp({
       return res.status(404).json({ error: "Character not found." });
     res.json({ ok: true });
   });
+  registerBugRoutes(app, db);
   app.use("/api", (req, res) => res.status(404).json({ error: "Not found." }));
   app.use((err, req, res, next) => {
     if (req.path.startsWith("/api")) {

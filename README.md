@@ -94,7 +94,7 @@ Register your own account normally, then grant it admin access from the app dire
 docker compose exec app node server/admin.mjs grant YOUR_ACCOUNT_EMAIL
 ```
 
-For the Mac mini deployment, first run `cd ~/Homelab/compose/d-d-character-tracker` in Mac Terminal. After granting access, refresh the app and select **Admin logs** in the sidebar (the scroll icon in the mobile header). No default admin password is included, and public registration cannot grant admin privileges. Admins use their normal account credentials; their character vault remains private to that account.
+For the Mac mini deployment, first run `cd ~/Homelab/compose/d-d-character-tracker` in Mac Terminal. After granting access, refresh the app and select **Admin logs** in the sidebar (or the **Navigate** dropdown on mobile). No default admin password is included, and public registration cannot grant admin privileges. Admins use their normal account credentials; their character vault remains private to that account.
 
 The viewer shows application activity, timestamps, severity, account IDs, request route templates, HTTP statuses, and durations. Filter by severity, refresh the latest results, or page through older entries. Logs cover sign-in/registration attempts, character operations, rejected requests, admin grants/revocations, and normal server starts/stops. Request failures appear as warnings or errors according to HTTP status. Logs omit passwords, cookies, request bodies, query strings, character names/content, and raw exception messages. Account IDs identify the account involved without exposing email addresses. Successful log-view requests are excluded to avoid filling the log with its own reads.
 
@@ -109,6 +109,14 @@ docker compose exec app node server/admin.mjs revoke YOUR_ACCOUNT_EMAIL
 For a local Node deployment, use `node server/admin.mjs grant YOUR_ACCOUNT_EMAIL` (or `revoke`) from the repository root. These commands require access to the server/database; there is no public admin-promotion endpoint.
 
 ## Included
+
+### Bug reporting
+
+Signed-in players can choose **Report a bug** to submit a title, description, and optional reproduction steps. Their **My reports** list shows only their own reports and their current status. Administrators can open **Admin bugs** to see all player reports, filter by status, and mark them Open, In progress, or Resolved. On mobile, use the **Navigate** dropdown for characters, reports, and admin pages (including Admin logs).
+
+Reports persist in SQLite alongside accounts and characters; the database table is created automatically on upgrade. Each account can submit up to 10 reports per hour. Report text is displayed as plain text and is excluded from application audit logs. Production and development deployments keep reports in their own databases. Reports are stored within the app; they are not sent to GitHub or email.
+
+### Character features
 
 - Email/password registration and sign-in, scrypt password hashes, expiring HTTP-only sessions, sign-out, login rate limiting, and same-origin mutation checks.
 - Server-side ownership enforcement: each account sees and changes only its own characters.

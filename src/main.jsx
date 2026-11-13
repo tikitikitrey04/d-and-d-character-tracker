@@ -22,6 +22,7 @@ import {
   Flame,
   Compass,
   Minus,
+  Bug,
 } from "lucide-react";
 import {
   abilities,
@@ -35,6 +36,7 @@ import {
 import "./styles.css";
 import PrintableCharacter from "./PrintableCharacter.jsx";
 import AdminLogs from "./AdminLogs.jsx";
+import BugReports from "./BugReports.jsx";
 import SpellSlots from "./SpellSlots.jsx";
 import OverviewSpells from "./OverviewSpells.jsx";
 import ThemeToggle, { ThemeProvider } from "./Theme.jsx";
@@ -1432,7 +1434,7 @@ function Sheet({ character, onSave, onBack, onDelete }) {
   );
 }
 function App() {
-  const [showAdmin, setShowAdmin] = useState(false);
+  const [page, setPage] = useState("characters");
   const [user, setUser] = useState(null),
     [loading, setLoading] = useState(true),
     [characters, setCharacters] = useState([]),
@@ -1486,7 +1488,7 @@ function App() {
     try {
       await api("/logout", { method: "POST" });
       setUser(null);
-      setShowAdmin(false);
+      setPage("characters");
       setSelected(null);
       setCharacters([]);
     } catch (e) {
@@ -1529,7 +1531,7 @@ function App() {
         <Brand />
         <div className="sidebar-section">YOUR ADVENTURES</div>
         <button
-          className={`sidebar-link ${showAdmin ? "" : "active"}`}
+          className={`sidebar-link ${page === "characters" ? "active" : ""}`}
           onClick={() => {
             if (
               !selected ||
@@ -1538,7 +1540,7 @@ function App() {
               )
             ) {
               setSelected(null);
-              setShowAdmin(false);
+              setPage("characters");
             }
           }}
         >
@@ -1546,7 +1548,7 @@ function App() {
         </button>
         {user.isAdmin && (
           <button
-            className={`sidebar-link ${showAdmin ? "active" : ""}`}
+            className={`sidebar-link ${page === "logs" ? "active" : ""}`}
             onClick={() => {
               if (
                 selected &&
@@ -1556,10 +1558,44 @@ function App() {
               )
                 return;
               setSelected(null);
-              setShowAdmin(true);
+              setPage("logs");
             }}
           >
             <ScrollText size={18} /> Admin logs
+          </button>
+        )}
+        <button
+          className={`sidebar-link ${page === "report" ? "active" : ""}`}
+          onClick={() => {
+            if (
+              selected &&
+              !window.confirm(
+                "Report a bug? Unsaved sheet changes will be discarded.",
+              )
+            )
+              return;
+            setSelected(null);
+            setPage("report");
+          }}
+        >
+          <Bug size={18} /> Report a bug
+        </button>
+        {user.isAdmin && (
+          <button
+            className={`sidebar-link ${page === "bugs" ? "active" : ""}`}
+            onClick={() => {
+              if (
+                selected &&
+                !window.confirm(
+                  "Open bug reports? Unsaved sheet changes will be discarded.",
+                )
+              )
+                return;
+              setSelected(null);
+              setPage("bugs");
+            }}
+          >
+            <Bug size={18} /> Admin bugs
           </button>
         )}
         <div className="sidebar-callout">
@@ -1576,7 +1612,7 @@ function App() {
               ) {
                 setSelected(null);
                 setCreating(true);
-                setShowAdmin(false);
+                setPage("characters");
               }
             }}
           >
@@ -1632,6 +1668,33 @@ function App() {
         </div>
       </aside>
       <main className="main-area">
+        <label className="mobile-navigation">
+          Navigate
+          <select
+            aria-label="Navigate"
+            value={page}
+            onChange={(e) => {
+              if (
+                selected &&
+                !window.confirm(
+                  "Leave this character? Unsaved sheet changes will be discarded.",
+                )
+              )
+                return;
+              setSelected(null);
+              setPage(e.target.value);
+            }}
+          >
+            <option value="characters">My characters</option>
+            <option value="report">Report a bug</option>
+            {user.isAdmin && (
+              <>
+                <option value="logs">Admin logs</option>
+                <option value="bugs">Admin bugs</option>
+              </>
+            )}
+          </select>
+        </label>
         {error && (
           <div className="error" role="alert">
             {error}
@@ -1640,8 +1703,15 @@ function App() {
             </button>
           </div>
         )}
-        {showAdmin && user.isAdmin ? (
-          <AdminLogs api={api} onBack={() => setShowAdmin(false)} />
+        {page === "report" || (page === "bugs" && user.isAdmin) ? (
+          <BugReports
+            key={page}
+            api={api}
+            admin={page === "bugs"}
+            onBack={() => setPage("characters")}
+          />
+        ) : page === "logs" && user.isAdmin ? (
+          <AdminLogs api={api} onBack={() => setPage("characters")} />
         ) : selected ? (
           <Sheet
             key={selected.id}
