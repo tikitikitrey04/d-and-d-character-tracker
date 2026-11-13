@@ -1701,7 +1701,7 @@ function App() {
         <Brand />
         <div className="sidebar-section">YOUR ADVENTURES</div>
         <button
-          className={`sidebar-link ${page === "characters" ? "active" : ""}`}
+          className={`sidebar-link ${["characters", "archive"].includes(page) ? "active" : ""}`}
           onClick={() => {
             if (
               !selected ||
@@ -1715,23 +1715,6 @@ function App() {
           }}
         >
           <Users size={18} /> My characters<span>{characters.length}</span>
-        </button>
-        <button
-          className={`sidebar-link ${page === "archive" ? "active" : ""}`}
-          onClick={() => {
-            if (
-              selected &&
-              !window.confirm(
-                "Open the archive? Unsaved sheet changes will be discarded.",
-              )
-            )
-              return;
-            setSelected(null);
-            setPage("archive");
-          }}
-        >
-          <Archive size={18} /> Character archive
-          <span>{archivedCharacters.length}</span>
         </button>
         {user.isAdmin && (
           <button
@@ -1891,7 +1874,7 @@ function App() {
           Navigate
           <select
             aria-label="Navigate"
-            value={page}
+            value={page === "archive" ? "characters" : page}
             onChange={(e) => {
               if (
                 selected &&
@@ -1905,7 +1888,6 @@ function App() {
             }}
           >
             <option value="characters">My characters</option>
-            <option value="archive">Character archive</option>
             <option value="report">Report a bug</option>
             <option value="account">Account settings</option>
             <option value="help">How to use</option>
