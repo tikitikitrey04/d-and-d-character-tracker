@@ -96,6 +96,48 @@ try {
   await page.getByLabel("Password", { exact: true }).fill("adventure-password");
   await page.getByRole("button", { name: "Begin your adventure" }).click();
   await page.getByRole("heading", { name: "My characters." }).waitFor();
+  await page.getByRole("button", { name: "How to use", exact: true }).click();
+  await page
+    .getByRole("heading", { name: "How to use", exact: true })
+    .waitFor();
+  const guideTopics = page.getByRole("navigation", {
+    name: "Guide topics",
+    exact: true,
+  });
+  assert.equal(await guideTopics.getByRole("link").count(), 9);
+  assert.equal(
+    await page
+      .getByRole("heading", { name: "Administrator tools", exact: true })
+      .count(),
+    0,
+  );
+  await guideTopics
+    .getByRole("link", { name: "Export a player sheet", exact: true })
+    .click();
+  assert.equal(await page.evaluate(() => location.hash), "#guide-pdf");
+  await page.locator("#guide-pdf").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "artifacts/how-to-use-desktop.png" });
+  await page
+    .getByRole("button", { name: "Back to characters", exact: true })
+    .click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByLabel("Navigate", { exact: true }).selectOption("help");
+  await page
+    .getByRole("heading", { name: "How to use", exact: true })
+    .waitFor();
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  );
+  await page
+    .getByRole("heading", { name: "How to use", exact: true })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "artifacts/how-to-use-mobile.png" });
+  await page
+    .getByRole("button", { name: "Back to characters", exact: true })
+    .click();
+  await page.setViewportSize({ width: 1440, height: 1050 });
   // A second browser session must be invalidated by a successful password change.
   const otherContext = await browser.newContext();
   const otherLogin = await otherContext.request.post(
@@ -221,6 +263,13 @@ try {
     .click();
   setAdmin(db, "robin@example.com", true, audit);
   await page.reload();
+  await page.getByRole("button", { name: "How to use", exact: true }).click();
+  await page
+    .getByRole("heading", { name: "Administrator tools", exact: true })
+    .waitFor();
+  await page
+    .getByRole("button", { name: "Back to characters", exact: true })
+    .click();
   await page.getByRole("button", { name: "Admin bugs", exact: true }).click();
   await page
     .getByRole("heading", { name: "Spell cast button is missing", exact: true })
@@ -1181,7 +1230,7 @@ try {
   assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
   assert.deepEqual(errors, []);
   console.log(
-    "Browser checks passed: password changes and session invalidation, account settings on desktop/mobile, bug reporting and admin status updates, admin logs, player accounts, spell and weapon management, casting and attack resource tracking, all six mobile tabs, dark/light themes, and Letter/A4 PDF export.",
+    "Browser checks passed: desktop/mobile How to use guide, password changes and session invalidation, account settings, bug reporting and admin status updates, admin logs, player accounts, spell and weapon management, casting and attack resource tracking, all six mobile tabs, dark/light themes, and Letter/A4 PDF export.",
   );
 } finally {
   if (browser) await browser.close();
