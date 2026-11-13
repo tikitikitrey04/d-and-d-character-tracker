@@ -2557,3 +2557,45 @@ textarea {
     line-height: 1.6;
   }
 }
+.admin-mobile {
+  display: none;
+}
+@media (max-width: 650px) {
+  .admin-mobile {
+    display: inline-flex;
+  }
+}
+.admin-log-controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 24px 0;
+}
+.admin-log-controls label {
+  display: grid;
+  gap: 6px;
+}
+.admin-log-table {
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+.admin-log-table table {
+  width: 100%;
+  min-width: 950px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.admin-log-table th,
+.admin-log-table td {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.admin-log-table th {
+  color: var(--muted);
+}
+.admin-log-table code {
+  overflow-wrap: anywhere;
+}
