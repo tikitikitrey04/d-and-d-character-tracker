@@ -9,7 +9,9 @@ import { blankCharacter } from "../shared/character.mjs";
 test("archive preserves full sheets across restarts and enforces ownership for all operations", async () => {
   const dir = mkdtempSync(join(tmpdir(), "keeper-archive-"));
   const databasePath = join(dir, "test.sqlite");
-  let instance = createApp({ databasePath, secureCookies: false });
+  // Simulate a public HTTPS site whose tunnel talks HTTP to this server.
+  const publicOrigin = "https://dnd.everetttang.com";
+  let instance = createApp({ databasePath, secureCookies: true, publicOrigin });
   let server;
   async function start() {
     server = instance.app.listen(0, "127.0.0.1");
@@ -31,6 +33,7 @@ test("archive preserves full sheets across restarts and enforces ownership for a
         headers: {
           "Content-Type": "application/json",
           "X-Keeper-Request": "1",
+          Origin: publicOrigin,
           ...(cookie ? { Cookie: cookie } : {}),
           ...headers,
         },
@@ -189,7 +192,7 @@ test("archive preserves full sheets across restarts and enforces ownership for a
         400,
       );
     await stop();
-    instance = createApp({ databasePath, secureCookies: false });
+    instance = createApp({ databasePath, secureCookies: true, publicOrigin });
     await start();
     assert.equal(
       (await request("/characters?archived=true", { cookie: alice.cookie }))

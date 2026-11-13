@@ -15,6 +15,8 @@ On Windows PowerShell, use `npm.cmd` if script execution policy blocks `npm`.
 
 Open **http://127.0.0.1:5173**. Vite forwards API requests to the Express server on port 3001. Register an account to begin; no seeded accounts or passwords are included.
 
+The development proxy preserves the browser-facing Host header so same-origin saves, archiving, and other mutations work through Vite. If upgrading from the old proxy configuration, stop and restart `npm run dev` to apply it. Leave `PUBLIC_ORIGIN` unset for local development, and open the address printed by Vite if port 5173 is already in use.
+
 ## Run with Docker on your local network
 
 For a **Mac mini using OrbStack and Dockge**, follow the [Mac deployment guide](docs/mac-mini-dockge.md). It covers stack discovery, LAN access, updates, and transferring existing accounts/characters.
@@ -48,6 +50,20 @@ New-NetFirewallRule -DisplayName "Character Keeper LAN" -Direction Inbound -Acti
 ```
 
 Use your configured port if different. Guest Wi-Fi/client isolation can prevent device-to-device access. Docker Desktop must remain running for the app to be available.
+
+### Public origin for HTTPS deployments
+
+The production deployment at `https://dnd.everetttang.com` needs `PUBLIC_ORIGIN=https://dnd.everetttang.com` and `SECURE_COOKIES=true` in its `.env` or Dockge environment editor. Keep existing port settings. Compose forwards the public origin into the container so requests from the HTTPS site are accepted even when the tunnel connects internally over HTTP. Use the exact origin with no trailing slash or path.
+
+For the separate local HTTP development deployment, leave `PUBLIC_ORIGIN` blank and keep `SECURE_COOKIES=false`. An origin configured for the production domain will reject mutations from a different development address.
+
+After changing the configuration, redeploy in Dockge or run `docker compose up -d --build --force-recreate app`. A restart alone does not apply environment changes. To check the running values without dumping other environment settings:
+
+```sh
+docker compose exec app node -e 'console.log({PUBLIC_ORIGIN:process.env.PUBLIC_ORIGIN,SECURE_COOKIES:process.env.SECURE_COOKIES})'
+```
+
+On an older Compose file, add `PUBLIC_ORIGIN: "https://dnd.everetttang.com"` directly under `services.app.environment` for production and redeploy. This setting applies to registration, saving, archiving, restoring, and other mutations. Unrelated origins remain rejected.
 
 ### Persistent accounts and characters
 
@@ -112,7 +128,7 @@ For a local Node deployment, use `node server/admin.mjs grant YOUR_ACCOUNT_EMAIL
 
 ### Character archive
 
-Open a character and choose **Archive character** at the bottom of the sheet. Confirmation saves the current edits and moves the complete sheet into **Character archive**, separate from the active vault. If saving fails, the character stays active. Open the archive from the sidebar or mobile **Navigate** menu; search by name, class, or campaign and choose **Restore character** to return it to **My characters**. Restore a character before editing, exporting, or permanently deleting it in the sheet.
+Open a character and choose **Archive character** at the bottom of the sheet. Confirmation saves the current edits and moves the complete sheet into **Character archive**, separate from the active vault. If saving fails, the character stays active. Open the archive using **Character archive** beside **Create character** on the **My characters** page (desktop and mobile); search by name, class, or campaign and choose **Restore character** to return it to **My characters**. Restore a character before editing, exporting, or permanently deleting it in the sheet.
 
 The archive retains character IDs, stats, spells, weapons, inventory, and journal, and persists in the existing SQLite volume. Archive status is separate from the sheet data, and its table is created automatically on upgrade. Accounts can archive, list, and restore only their own characters. Archiving is not permanent deletion.
 
