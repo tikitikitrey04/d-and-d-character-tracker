@@ -2764,14 +2764,32 @@ textarea {
   flex-wrap: wrap;
   gap: 16px;
 }
-.vault-heading-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
+
+.export-dropdown {
+  position: relative;
 }
-.vault-heading-actions .secondary {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+.export-options {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  min-width: 140px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--dark-surface, #fff);
+  box-shadow: 0 6px 18px #0002;
+}
+.export-options button {
+  border: 0;
+  background: transparent;
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  border-radius: 4px;
+}
+.export-options button:hover,
+.export-options button:focus-visible {
+  background: var(--dark-soft, #f0f4ec);
 }

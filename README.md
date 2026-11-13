@@ -167,7 +167,7 @@ Use the **Dark theme / Light theme** button on the sign-in screen or near the bo
 
 ### Export a player sheet
 
-Open a character and click **Export PDF**, then select **Save as PDF** in your browser’s print dialog (or choose a printer for a paper copy). The export includes every sheet section, regardless of the current tab: combat stats, abilities, skills, saves, attacks, resources, spell slots, spells, equipment, features, and journal. It uses a dedicated, ink-friendly layout with selectable text and page breaks for long content. The browser controls paper size and margins; both Letter and A4 work. Turn off browser headers/footers for a clean sheet. Export uses your current edits without saving or changing the character in the database.
+Open a character and choose **Export → PDF**, then select **Save as PDF** in your browser’s print dialog (or choose a printer for a paper copy). The export includes every sheet section, regardless of the current tab: combat stats, abilities, skills, saves, attacks, resources, spell slots, spells, equipment, features, and journal. It uses a dedicated, ink-friendly layout with selectable text and page breaks for long content. The browser controls paper size and margins; both Letter and A4 work. Turn off browser headers/footers for a clean sheet. Export uses your current edits without saving or changing the character in the database.
 
 ### Choose spells
 
@@ -219,7 +219,13 @@ Enable **Manual preparation limits** to set custom cantrip and prepared-spell to
 
 ### JSON character backups
 
-Choose **Export JSON** on a character sheet to download its full current data, including unsaved edits, weapons, spells, inventory, and journal. In **My characters**, choose **Import JSON** and select a Character Keeper export (version 1, up to 5 MB). The imported sheet is saved as a new character in your account and opens immediately; existing characters are never replaced. Account details, character IDs, and archive status are excluded. Import uses the same field validation and preparation/equipment limits as creating a character; rejected files show an error without creating a sheet.
+Choose **Export → JSON** on a character sheet to download its full current data, including unsaved edits, weapons, spells, inventory, and journal. In **My characters**, choose **Import JSON** and select a Character Keeper export (version 1, up to 5 MB). The imported sheet is saved as a new character in your account and opens immediately; existing characters are never replaced. Account details, character IDs, and archive status are excluded. Import uses the same field validation and preparation/equipment limits as creating a character; rejected files show an error without creating a sheet.
+
+### Official subclasses
+
+The character creator and **Features → Subclass** offer all 48 subclass names from the **2024 Player’s Handbook**, filtered to the selected class. Official choices unlock at level 3. The picker shows reached subclass feature levels and the next milestone, based on the class’s progression. Names were checked against [Wizards’ 2024 overview](https://www.dndbeyond.com/posts/1810-updates-in-the-players-handbook-2024); progression follows the [2024 class tables](https://www.dndbeyond.com/sources/dnd/br-2024/character-classes).
+
+Use **Custom / other source** for homebrew, older books, or other supplements. Existing names are preserved, including after changing class or lowering level; warnings flag incompatible official names or selections below level 3. Selection persists through saving, archive/restore, JSON, and PDF. Eldritch Knight and Arcane Trickster drive the existing automatic spell slots, preparation limits, and Wizard spell access. Other subclass abilities, resources, bonus spells, and combat effects are entered and resolved manually; selecting a subclass does not grant feature text or change stats automatically.
 
 ## Rules scope
 

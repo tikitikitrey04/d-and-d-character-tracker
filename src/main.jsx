@@ -11,6 +11,7 @@ import {
   Plus,
   LogOut,
   ChevronRight,
+  ChevronDown,
   Check,
   X,
   ScrollText,
@@ -42,6 +43,7 @@ import BugReports from "./BugReports.jsx";
 import AccountSettings from "./AccountSettings.jsx";
 import HowToUse from "./HowToUse.jsx";
 import CharacterArchive from "./CharacterArchive.jsx";
+import SubclassPicker from "./SubclassPicker.jsx";
 import SpellSlots from "./SpellSlots.jsx";
 import OverviewSpells from "./OverviewSpells.jsx";
 import ThemeToggle, { ThemeProvider } from "./Theme.jsx";
@@ -97,6 +99,76 @@ async function api(path, options = {}) {
 }
 import { newId } from "../shared/id.mjs";
 const uid = newId;
+function ExportButton({ onJSON, onPDF }) {
+  const [open, setOpen] = useState(false);
+  const container = useRef(null);
+  const trigger = useRef(null);
+  const optionsId = useId();
+  useEffect(() => {
+    if (!open) return;
+    function dismiss(event) {
+      if (!container.current?.contains(event.target)) setOpen(false);
+    }
+    function escape(event) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        trigger.current?.focus();
+      }
+    }
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [open]);
+  function choose(action) {
+    setOpen(false);
+    trigger.current?.focus();
+    action();
+  }
+  return (
+    <div
+      className="export-dropdown"
+      ref={container}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+      }}
+    >
+      <button
+        ref={trigger}
+        className="secondary small"
+        aria-expanded={open}
+        aria-controls={optionsId}
+        onClick={() => setOpen(!open)}
+      >
+        <Download size={15} /> Export <ChevronDown size={14} />
+      </button>
+      {open && (
+        <div
+          id={optionsId}
+          className="export-options"
+          role="group"
+          aria-label="Export format"
+        >
+          <button
+            onClick={() => choose(onJSON)}
+            title="Download the current sheet, including unsaved changes"
+          >
+            JSON
+          </button>
+          <button
+            onClick={() => choose(onPDF)}
+            title="Open the print dialog, then choose Save as PDF"
+          >
+            PDF
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Field({ label, children, ...props }) {
   const id = useId();
   return (
@@ -405,6 +477,10 @@ function Creator({ onClose, onCreate }) {
               maxLength={200}
             />
           </div>
+          <SubclassPicker
+            character={draft}
+            onChange={(value) => set("subclass", value)}
+          />
           <Field
             label="Campaign (optional)"
             value={draft.campaign}
@@ -810,17 +886,9 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
               </>
             )}
           </span>
-          <button
-            className="secondary small"
-            onClick={exportSheet}
-            title="Open the print dialog, then choose Save as PDF"
-          >
-            <Download size={15} /> Export PDF
-          </button>
-          <button
-            className="secondary small"
-            title="Download the current sheet, including unsaved changes"
-            onClick={() => {
+          <ExportButton
+            onPDF={exportSheet}
+            onJSON={() => {
               try {
                 downloadCharacter(c);
                 setError("");
@@ -828,9 +896,7 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                 setError(e.message);
               }
             }}
-          >
-            <Download size={15} /> Export JSON
-          </button>
+          />
           <button
             className="primary small"
             onClick={save}
@@ -1342,11 +1408,9 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                     ))}
                   </select>
                 </Field>
-                <Field
-                  label="Subclass"
-                  value={c.subclass}
-                  maxLength={200}
-                  onChange={(e) => set("subclass", e.target.value)}
+                <SubclassPicker
+                  character={c}
+                  onChange={(value) => set("subclass", value)}
                 />
                 <NumberField
                   label="Level"
