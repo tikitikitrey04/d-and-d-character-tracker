@@ -17,7 +17,9 @@ Open **http://127.0.0.1:5173**. Vite forwards API requests to the Express server
 
 ## Run with Docker on your local network
 
-Install/start **Docker Desktop with Linux containers** (or Docker Engine with Compose on Linux), then run from this repository:
+For a **Mac mini using OrbStack and Dockge**, follow the [Mac deployment guide](docs/mac-mini-dockge.md). It covers stack discovery, LAN access, updates, and transferring existing accounts/characters.
+
+Install/start **OrbStack on macOS**, **Docker Desktop with Linux containers**, or **Docker Engine with Compose on Linux**, then run from this repository:
 
 ```sh
 docker compose up --build -d
@@ -83,6 +85,28 @@ docker compose stop               # stop, keep container/data
 docker compose start              # start again
 docker compose down               # remove container/network, keep data volume
 ```
+
+## Administrator access and application logs
+
+Register your own account normally, then grant it admin access from the app directory on the Docker host:
+
+```sh
+docker compose exec app node server/admin.mjs grant YOUR_ACCOUNT_EMAIL
+```
+
+For the Mac mini deployment, first run `cd ~/Homelab/compose/d-d-character-tracker` in Mac Terminal. After granting access, refresh the app and select **Admin logs** in the sidebar (the scroll icon in the mobile header). No default admin password is included, and public registration cannot grant admin privileges. Admins use their normal account credentials; their character vault remains private to that account.
+
+The viewer shows application activity, timestamps, severity, account IDs, request route templates, HTTP statuses, and durations. Filter by severity, refresh the latest results, or page through older entries. Logs cover sign-in/registration attempts, character operations, rejected requests, admin grants/revocations, and normal server starts/stops. Request failures appear as warnings or errors according to HTTP status. Logs omit passwords, cookies, request bodies, query strings, character names/content, and raw exception messages. Account IDs identify the account involved without exposing email addresses. Successful log-view requests are excluded to avoid filling the log with its own reads.
+
+Logs and admin assignments persist in the existing SQLite volume. Entries expire as new events are written, with a maximum of 30 days or 10,000 entries. Database migrations happen automatically on startup for existing installations. The viewer displays application events recorded after this upgrade; Docker build output, deployment updater output, and historical container console logs remain in Dockge.
+
+To revoke access immediately, including for existing sessions:
+
+```sh
+docker compose exec app node server/admin.mjs revoke YOUR_ACCOUNT_EMAIL
+```
+
+For a local Node deployment, use `node server/admin.mjs grant YOUR_ACCOUNT_EMAIL` (or `revoke`) from the repository root. These commands require access to the server/database; there is no public admin-promotion endpoint.
 
 ## Included
 

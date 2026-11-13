@@ -34,6 +34,7 @@ import {
 } from "../shared/character.mjs";
 import "./styles.css";
 import PrintableCharacter from "./PrintableCharacter.jsx";
+import AdminLogs from "./AdminLogs.jsx";
 import SpellSlots from "./SpellSlots.jsx";
 import OverviewSpells from "./OverviewSpells.jsx";
 import ThemeToggle, { ThemeProvider } from "./Theme.jsx";
@@ -1431,6 +1432,7 @@ function Sheet({ character, onSave, onBack, onDelete }) {
   );
 }
 function App() {
+  const [showAdmin, setShowAdmin] = useState(false);
   const [user, setUser] = useState(null),
     [loading, setLoading] = useState(true),
     [characters, setCharacters] = useState([]),
@@ -1484,6 +1486,7 @@ function App() {
     try {
       await api("/logout", { method: "POST" });
       setUser(null);
+      setShowAdmin(false);
       setSelected(null);
       setCharacters([]);
     } catch (e) {
@@ -1526,19 +1529,39 @@ function App() {
         <Brand />
         <div className="sidebar-section">YOUR ADVENTURES</div>
         <button
-          className="sidebar-link active"
+          className={`sidebar-link ${showAdmin ? "" : "active"}`}
           onClick={() => {
             if (
               !selected ||
               window.confirm(
                 "Return to your vault? Unsaved sheet changes will be discarded.",
               )
-            )
+            ) {
               setSelected(null);
+              setShowAdmin(false);
+            }
           }}
         >
           <Users size={18} /> My characters<span>{characters.length}</span>
         </button>
+        {user.isAdmin && (
+          <button
+            className={`sidebar-link ${showAdmin ? "active" : ""}`}
+            onClick={() => {
+              if (
+                selected &&
+                !window.confirm(
+                  "Open logs? Unsaved sheet changes will be discarded.",
+                )
+              )
+                return;
+              setSelected(null);
+              setShowAdmin(true);
+            }}
+          >
+            <ScrollText size={18} /> Admin logs
+          </button>
+        )}
         <div className="sidebar-callout">
           <div className="tiny-stars">✦ · ✧</div>
           <h3>Make it a good story.</h3>
@@ -1553,6 +1576,7 @@ function App() {
               ) {
                 setSelected(null);
                 setCreating(true);
+                setShowAdmin(false);
               }
             }}
           >
@@ -1574,10 +1598,29 @@ function App() {
           <ThemeToggle />
         </div>
         <div className="user-block">
+          {user.isAdmin && (
+            <button
+              className="icon-button admin-mobile"
+              aria-label="Admin logs"
+              onClick={() => {
+                if (
+                  selected &&
+                  !window.confirm(
+                    "Open logs? Unsaved sheet changes will be discarded.",
+                  )
+                )
+                  return;
+                setSelected(null);
+                setShowAdmin(true);
+              }}
+            >
+              <ScrollText size={17} />
+            </button>
+          )}
           <div className="avatar">{user.name.charAt(0).toUpperCase()}</div>
           <div>
             <strong>{user.name}</strong>
-            <small>Adventurer</small>
+            <small>{user.isAdmin ? "Administrator" : "Adventurer"}</small>
           </div>
           <button
             className="icon-button"
@@ -1597,7 +1640,9 @@ function App() {
             </button>
           </div>
         )}
-        {selected ? (
+        {showAdmin && user.isAdmin ? (
+          <AdminLogs api={api} onBack={() => setShowAdmin(false)} />
+        ) : selected ? (
           <Sheet
             key={selected.id}
             character={selected}

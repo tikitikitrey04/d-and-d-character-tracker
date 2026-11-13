@@ -12,6 +12,7 @@ import { normalizeCharacterSlots } from "../shared/slots.mjs";
 import { preparationIncreaseError } from "../shared/preparation.mjs";
 import { weaponChangeError } from "../shared/weapons.mjs";
 import { secureCookiesFromEnv } from "./config.mjs";
+import { initializeAudit } from "./audit.mjs";
 const scrypt = promisify(scryptCallback);
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 export function createApp({
@@ -23,10 +24,62 @@ export function createApp({
     "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL); CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), expires INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS characters (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), data TEXT NOT NULL, updated TEXT NOT NULL);",
   );
   const app = express();
+  db.exec("PRAGMA busy_timeout=5000;");
+  const audit = initializeAudit(db);
   app.disable("x-powered-by");
   app.get("/healthz", (req, res) => {
     db.prepare("SELECT 1").get();
     res.set("Cache-Control", "no-store").json({ ok: true });
+  });
+  app.use("/api", (req, res, next) => {
+    const start = performance.now();
+    res.on("finish", () => {
+      // Only fixed route templates are recorded, never URLs, queries or bodies.
+      const route = req.route?.path;
+      if (route === "/api/admin/logs" && res.statusCode < 400) return;
+      const events = {
+        "GET /api/me": "session.checked",
+        "POST /api/logout": "auth.logout",
+        "GET /api/characters": "characters.listed",
+        "POST /api/characters": "character.created",
+        "PUT /api/characters/:id": "character.updated",
+        "DELETE /api/characters/:id": "character.deleted",
+        "GET /api/admin/logs": "admin.logs",
+      };
+      const event =
+        route === "/api/auth/:action" &&
+        ["login", "register"].includes(req.params.action)
+          ? `auth.${req.params.action}`
+          : events[`${req.method} ${route}`] || "request.rejected";
+      audit({
+        event,
+        level:
+          res.statusCode >= 500
+            ? "error"
+            : res.statusCode >= 400
+              ? "warn"
+              : "info",
+        actorId: req.user?.id || res.locals.actorId || null,
+        method: [
+          "GET",
+          "HEAD",
+          "POST",
+          "PUT",
+          "DELETE",
+          "PATCH",
+          "OPTIONS",
+        ].includes(req.method)
+          ? req.method
+          : "OTHER",
+        route:
+          events[`${req.method} ${route}`] || route === "/api/auth/:action"
+            ? route
+            : "/api/*",
+        status: res.statusCode,
+        durationMs: Math.round(performance.now() - start),
+      });
+    });
+    next();
   });
   app.use(express.json({ limit: "5mb" }));
   app.use("/api", (req, res, next) => {
@@ -36,7 +89,8 @@ export function createApp({
         return res.status(403).json({ error: "Request rejected." });
       if (
         req.get("origin") &&
-        req.get("origin") !== `${req.protocol}://${req.get("host")}`
+        req.get("origin") !==
+          (process.env.PUBLIC_ORIGIN || `${req.protocol}://${req.get("host")}`)
       )
         return res.status(403).json({ error: "Origin rejected." });
     }
@@ -133,7 +187,15 @@ export function createApp({
             .json({ error: "Email or password is incorrect." });
       }
       newSession(res, user.id);
-      res.json({ id: user.id, name: user.name, email: user.email });
+      res.locals.actorId = user.id;
+      res.json({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        isAdmin: Boolean(
+          db.prepare("SELECT 1 FROM admins WHERE user_id=?").get(user.id),
+        ),
+      });
     } catch (e) {
       next(e);
     }
@@ -148,16 +210,47 @@ export function createApp({
       token &&
       db
         .prepare(
-          "SELECT users.id, users.name, users.email FROM sessions JOIN users ON users.id=sessions.user_id WHERE token=? AND expires>?",
+          "SELECT users.id, users.name, users.email, EXISTS(SELECT 1 FROM admins WHERE user_id=users.id) AS isAdmin FROM sessions JOIN users ON users.id=sessions.user_id WHERE token=? AND expires>?",
         )
         .get(hash(token), Date.now());
     if (!session)
       return res.status(401).json({ error: "Please sign in to continue." });
     req.user = session;
+    req.user.isAdmin = Boolean(session.isAdmin);
     req.sessionToken = hash(token);
     next();
   });
   app.get("/api/me", (req, res) => res.json(req.user));
+  app.get("/api/admin/logs", (req, res) => {
+    if (!req.user.isAdmin)
+      return res.status(403).json({ error: "Administrator access required." });
+    const { level, before } = req.query;
+    if (
+      Object.keys(req.query).some(
+        (key) => !["level", "before"].includes(key),
+      ) ||
+      (level !== undefined && !["info", "warn", "error"].includes(level)) ||
+      (before !== undefined &&
+        (typeof before !== "string" ||
+          !/^\d{1,15}$/.test(before) ||
+          Number(before) < 1))
+    )
+      return res.status(400).json({ error: "Invalid log filter." });
+    const rows = db
+      .prepare(
+        `SELECT * FROM audit_logs
+      WHERE (? IS NULL OR level=?) AND (? IS NULL OR id<?)
+      ORDER BY id DESC LIMIT 101`,
+      )
+      .all(
+        level ?? null,
+        level ?? null,
+        before ?? null,
+        before === undefined ? null : Number(before),
+      );
+    const logs = rows.slice(0, 100);
+    res.json({ logs, nextBefore: rows.length > 100 ? logs.at(-1).id : null });
+  });
   app.post("/api/logout", (req, res) => {
     db.prepare("DELETE FROM sessions WHERE token=?").run(req.sessionToken);
     res.setHeader("Set-Cookie", cookie("", 0));
@@ -240,7 +333,7 @@ export function createApp({
   app.use("/api", (req, res) => res.status(404).json({ error: "Not found." }));
   app.use((err, req, res, next) => {
     if (req.path.startsWith("/api")) {
-      console.error(err.message);
+      console.error("API request failed.");
       return res.status(err.status || 500).json({
         error:
           err.status === 413
@@ -250,5 +343,5 @@ export function createApp({
     }
     next(err);
   });
-  return { app, db };
+  return { app, db, audit };
 }

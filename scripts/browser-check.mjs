@@ -4,9 +4,10 @@ import { resolve } from "node:path";
 import assert from "node:assert/strict";
 import { mkdirSync } from "node:fs";
 import { createApp } from "../server/app.mjs";
+import { setAdmin } from "../server/audit.mjs";
 
 // An isolated database keeps QA accounts and characters out of the player's data.
-const { app, db } = createApp({
+const { app, db, audit } = createApp({
   databasePath: ":memory:",
   secureCookies: false,
 });
@@ -95,6 +96,43 @@ try {
   await page.getByLabel("Password", { exact: true }).fill("adventure-password");
   await page.getByRole("button", { name: "Begin your adventure" }).click();
   await page.getByRole("heading", { name: "My characters." }).waitFor();
+  assert.equal(
+    await page.getByRole("button", { name: "Admin logs", exact: true }).count(),
+    0,
+  );
+  setAdmin(db, "robin@example.com", true, audit);
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Admin logs", exact: true })
+    .first()
+    .click();
+  await page.getByRole("heading", { name: "Application logs" }).waitFor();
+  await page
+    .getByRole("cell", { name: "admin.granted", exact: true })
+    .waitFor();
+  await page.getByLabel("Severity").selectOption("error");
+  await page.getByText("No logs match this filter.").waitFor();
+  await page.getByLabel("Severity").selectOption("");
+  await page
+    .getByRole("cell", { name: "auth.register", exact: true })
+    .waitFor();
+  await page.screenshot({ path: "artifacts/admin-logs-desktop.png" });
+  await page
+    .getByRole("button", { name: "Back to characters", exact: true })
+    .click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page
+    .getByRole("button", { name: "Admin logs", exact: true })
+    .last()
+    .click();
+  await page
+    .getByRole("cell", { name: "admin.granted", exact: true })
+    .waitFor();
+  await page.screenshot({ path: "artifacts/admin-logs-mobile.png" });
+  await page
+    .getByRole("button", { name: "Back to characters", exact: true })
+    .click();
+  await page.setViewportSize({ width: 1440, height: 1050 });
   await page
     .getByRole("button", { name: "Switch to light theme", exact: true })
     .click();
@@ -973,7 +1011,7 @@ try {
   assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
   assert.deepEqual(errors, []);
   console.log(
-    "Browser checks passed: player accounts, spell and weapon management, casting and attack resource tracking, all six mobile tabs, dark/light themes, and Letter/A4 PDF export.",
+    "Browser checks passed: admin logs on desktop/mobile, player accounts, spell and weapon management, casting and attack resource tracking, all six mobile tabs, dark/light themes, and Letter/A4 PDF export.",
   );
 } finally {
   if (browser) await browser.close();
