@@ -175,7 +175,7 @@ const sections = [
     title: "Export a player sheet",
     steps: [
       <>
-        Open your character and choose <strong>Export PDF</strong>.
+        Open your character and choose <strong>Export → PDF</strong>.
       </>,
       <>
         In the browser's print dialog, choose <strong>Save as PDF</strong> or
@@ -195,7 +195,7 @@ const sections = [
     title: "Back up or import a character",
     steps: [
       <>
-        Open a sheet and choose <strong>Export JSON</strong> to download its
+        Open a sheet and choose <strong>Export → JSON</strong> to download its
         current data, including unsaved edits.
       </>,
       <>

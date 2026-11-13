@@ -1153,7 +1153,8 @@ try {
       window.dispatchEvent(new Event("afterprint"));
     };
   });
-  await page.getByRole("button", { name: "Export PDF", exact: true }).click();
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  await page.getByRole("button", { name: "PDF", exact: true }).click();
   assert.equal(await page.evaluate(() => window.printCalled), true);
   assert.equal(
     await page.evaluate(() => window.exportTitle),
@@ -1220,9 +1221,7 @@ try {
   await page.emulateMedia({ media: "screen" });
   assert.equal(await printable.isVisible(), false);
   assert.ok(
-    await page
-      .getByRole("button", { name: "Export PDF", exact: true })
-      .isVisible(),
+    await page.getByRole("button", { name: "Export", exact: true }).isVisible(),
   );
   // Archiving saves unsaved sheet data and keeps it out of the active vault.
   page.once("dialog", (dialog) => dialog.dismiss());
@@ -1328,7 +1327,8 @@ try {
   );
   // Download the current sheet, then import a separate copy through the vault.
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export JSON", exact: true }).click();
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  await page.getByRole("button", { name: "JSON", exact: true }).click();
   const download = await downloadPromise;
   assert.equal(download.suggestedFilename(), "Mira-Ashfall.json");
   const backup = JSON.parse(readFileSync(await download.path(), "utf8"));

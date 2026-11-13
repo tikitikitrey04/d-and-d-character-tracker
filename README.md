@@ -151,7 +151,7 @@ Use the **Dark theme / Light theme** button on the sign-in screen or near the bo
 
 ### Export a player sheet
 
-Open a character and click **Export PDF**, then select **Save as PDF** in your browser’s print dialog (or choose a printer for a paper copy). The export includes every sheet section, regardless of the current tab: combat stats, abilities, skills, saves, attacks, resources, spell slots, spells, equipment, features, and journal. It uses a dedicated, ink-friendly layout with selectable text and page breaks for long content. The browser controls paper size and margins; both Letter and A4 work. Turn off browser headers/footers for a clean sheet. Export uses your current edits without saving or changing the character in the database.
+Open a character and choose **Export → PDF**, then select **Save as PDF** in your browser’s print dialog (or choose a printer for a paper copy). The export includes every sheet section, regardless of the current tab: combat stats, abilities, skills, saves, attacks, resources, spell slots, spells, equipment, features, and journal. It uses a dedicated, ink-friendly layout with selectable text and page breaks for long content. The browser controls paper size and margins; both Letter and A4 work. Turn off browser headers/footers for a clean sheet. Export uses your current edits without saving or changing the character in the database.
 
 ### Choose spells
 
@@ -203,7 +203,7 @@ Enable **Manual preparation limits** to set custom cantrip and prepared-spell to
 
 ### JSON character backups
 
-Choose **Export JSON** on a character sheet to download its full current data, including unsaved edits, weapons, spells, inventory, and journal. In **My characters**, choose **Import JSON** and select a Character Keeper export (version 1, up to 5 MB). The imported sheet is saved as a new character in your account and opens immediately; existing characters are never replaced. Account details, character IDs, and archive status are excluded. Import uses the same field validation and preparation/equipment limits as creating a character; rejected files show an error without creating a sheet.
+Choose **Export → JSON** on a character sheet to download its full current data, including unsaved edits, weapons, spells, inventory, and journal. In **My characters**, choose **Import JSON** and select a Character Keeper export (version 1, up to 5 MB). The imported sheet is saved as a new character in your account and opens immediately; existing characters are never replaced. Account details, character IDs, and archive status are excluded. Import uses the same field validation and preparation/equipment limits as creating a character; rejected files show an error without creating a sheet.
 
 ## Rules scope
 
