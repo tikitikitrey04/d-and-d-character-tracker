@@ -23,6 +23,7 @@ import {
   Compass,
   Minus,
   Bug,
+  Archive,
 } from "lucide-react";
 import {
   abilities,
@@ -39,6 +40,7 @@ import AdminLogs from "./AdminLogs.jsx";
 import BugReports from "./BugReports.jsx";
 import AccountSettings from "./AccountSettings.jsx";
 import HowToUse from "./HowToUse.jsx";
+import CharacterArchive from "./CharacterArchive.jsx";
 import SpellSlots from "./SpellSlots.jsx";
 import OverviewSpells from "./OverviewSpells.jsx";
 import ThemeToggle, { ThemeProvider } from "./Theme.jsx";
@@ -664,7 +666,7 @@ function RecordList({ title, items, onChange, type, addForm, character }) {
     </section>
   );
 }
-function Sheet({ character, onSave, onBack, onDelete }) {
+function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
   const [c, setC] = useState(() => normalizeCharacterSlots(character)),
     [tab, setTab] = useState("Overview"),
     [busy, setBusy] = useState(false),
@@ -1399,6 +1401,28 @@ function Sheet({ character, onSave, onBack, onDelete }) {
           <Shield size={13} /> Your sheet is private to your account.
         </span>
         <button
+          className="text-button"
+          disabled={busy}
+          onClick={async () => {
+            if (
+              !window.confirm(
+                `Save and archive ${c.name}? Its full sheet will be kept in your archive and can be restored later.`,
+              )
+            )
+              return;
+            setBusy(true);
+            setError("");
+            try {
+              await onArchive(c);
+            } catch (e) {
+              setError(e.message);
+              setBusy(false);
+            }
+          }}
+        >
+          <Archive size={13} /> Archive character
+        </button>
+        <button
           className="text-button danger"
           disabled={busy}
           onClick={async () => {
@@ -1440,6 +1464,7 @@ function App() {
   const [user, setUser] = useState(null),
     [loading, setLoading] = useState(true),
     [characters, setCharacters] = useState([]),
+    [archivedCharacters, setArchivedCharacters] = useState([]),
     [selected, setSelected] = useState(null),
     [creating, setCreating] = useState(false),
     [error, setError] = useState(""),
@@ -1455,8 +1480,11 @@ function App() {
   }, []);
   useEffect(() => {
     if (user)
-      api("/characters")
-        .then(setCharacters)
+      Promise.all([api("/characters"), api("/characters?archived=true")])
+        .then(([active, archived]) => {
+          setCharacters(active);
+          setArchivedCharacters(archived);
+        })
         .catch((e) => setError(e.message));
   }, [user]);
   async function create(c) {
@@ -1481,6 +1509,25 @@ function App() {
     setCharacters((prev) => prev.filter((v) => v.id !== id));
     setSelected(null);
   }
+  async function archive(c) {
+    // Save current edits before moving the sheet, so no in-browser progress is lost.
+    const saved = await save(c);
+    const archived = await api(`/characters/${saved.id}/archive`, {
+      method: "POST",
+    });
+    setCharacters((prev) => prev.filter((v) => v.id !== saved.id));
+    setArchivedCharacters((prev) => [
+      archived,
+      ...prev.filter((v) => v.id !== saved.id),
+    ]);
+    setSelected(null);
+    setPage("archive");
+  }
+  async function restore(id) {
+    const restored = await api(`/characters/${id}/restore`, { method: "POST" });
+    setArchivedCharacters((prev) => prev.filter((v) => v.id !== id));
+    setCharacters((prev) => [restored, ...prev.filter((v) => v.id !== id)]);
+  }
   async function logout() {
     if (
       selected &&
@@ -1493,6 +1540,7 @@ function App() {
       setPage("characters");
       setSelected(null);
       setCharacters([]);
+      setArchivedCharacters([]);
     } catch (e) {
       setError(e.message);
     }
@@ -1547,6 +1595,23 @@ function App() {
           }}
         >
           <Users size={18} /> My characters<span>{characters.length}</span>
+        </button>
+        <button
+          className={`sidebar-link ${page === "archive" ? "active" : ""}`}
+          onClick={() => {
+            if (
+              selected &&
+              !window.confirm(
+                "Open the archive? Unsaved sheet changes will be discarded.",
+              )
+            )
+              return;
+            setSelected(null);
+            setPage("archive");
+          }}
+        >
+          <Archive size={18} /> Character archive
+          <span>{archivedCharacters.length}</span>
         </button>
         {user.isAdmin && (
           <button
@@ -1720,6 +1785,7 @@ function App() {
             }}
           >
             <option value="characters">My characters</option>
+            <option value="archive">Character archive</option>
             <option value="report">Report a bug</option>
             <option value="account">Account settings</option>
             <option value="help">How to use</option>
@@ -1739,7 +1805,13 @@ function App() {
             </button>
           </div>
         )}
-        {page === "help" ? (
+        {page === "archive" ? (
+          <CharacterArchive
+            characters={archivedCharacters}
+            onRestore={restore}
+            onBack={() => setPage("characters")}
+          />
+        ) : page === "help" ? (
           <HowToUse
             isAdmin={user.isAdmin}
             onBack={() => setPage("characters")}
@@ -1765,6 +1837,7 @@ function App() {
             character={selected}
             onSave={save}
             onDelete={remove}
+            onArchive={archive}
             onBack={() => setSelected(null)}
           />
         ) : (
