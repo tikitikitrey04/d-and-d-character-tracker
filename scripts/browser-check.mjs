@@ -2,7 +2,7 @@ import { chromium } from "@playwright/test";
 import express from "express";
 import { resolve } from "node:path";
 import assert from "node:assert/strict";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { createApp } from "../server/app.mjs";
 import { setAdmin } from "../server/audit.mjs";
 
@@ -1326,7 +1326,52 @@ try {
     await page.getByPlaceholder("Our story begins…").inputValue(),
     exportNotes,
   );
+  // Download the current sheet, then import a separate copy through the vault.
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export JSON", exact: true }).click();
+  const download = await downloadPromise;
+  assert.equal(download.suggestedFilename(), "Mira-Ashfall.json");
+  const backup = JSON.parse(readFileSync(await download.path(), "utf8"));
+  assert.equal(backup.character.notes, exportNotes);
+  assert.equal(backup.character.id, undefined);
   page.once("dialog", (dialog) => dialog.accept());
+  await page
+    .getByRole("button", { name: "My characters", exact: true })
+    .click();
+  const fileInput = page.getByLabel("Import character JSON file");
+  await fileInput.setInputFiles({
+    name: "broken.json",
+    mimeType: "application/json",
+    buffer: Buffer.from("{"),
+  });
+  await page.getByRole("alert").filter({ hasText: "not valid JSON" }).waitFor();
+  backup.character.name = "Mira imported";
+  await fileInput.setInputFiles({
+    name: "backup.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(backup)),
+  });
+  await page
+    .getByRole("heading", { name: "Mira imported", exact: true })
+    .waitFor();
+  await page.reload();
+  await page.getByRole("heading", { name: "My characters." }).waitFor();
+  assert.equal(
+    await page
+      .locator(".character-card")
+      .filter({ hasText: "Mira imported" })
+      .count(),
+    1,
+  );
+  assert.equal(
+    await page
+      .locator(".character-card")
+      .filter({
+        has: page.getByRole("heading", { name: "Mira Ashfall", exact: true }),
+      })
+      .count(),
+    1,
+  );
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await page.getByRole("heading", { name: "An adventure awaits." }).waitFor();
   assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");

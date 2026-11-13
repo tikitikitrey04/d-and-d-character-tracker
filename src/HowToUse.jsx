@@ -191,6 +191,26 @@ const sections = [
     note: "The export reflects your current edits. Click Save character separately to keep those edits in your account.",
   },
   {
+    id: "json",
+    title: "Back up or import a character",
+    steps: [
+      <>
+        Open a sheet and choose <strong>Export JSON</strong> to download its
+        current data, including unsaved edits.
+      </>,
+      <>
+        In <strong>My characters</strong>, choose <strong>Import JSON</strong>{" "}
+        and select a Character Keeper export up to 5 MB.
+      </>,
+      <>
+        The imported character is saved as a new sheet in your account. Existing
+        characters stay intact. Invalid files or sheets exceeding preparation or
+        equipment limits show an error.
+      </>,
+    ],
+    note: "JSON exports exclude account details and archive status. Exporting does not save edits to your account.",
+  },
+  {
     id: "account",
     title: "Account settings and appearance",
     steps: [
