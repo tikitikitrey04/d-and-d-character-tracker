@@ -18,6 +18,7 @@ const hash = (value) => createHash("sha256").update(value).digest("hex");
 export function createApp({
   databasePath = "data/keeper.sqlite",
   secureCookies = secureCookiesFromEnv(),
+  publicOrigin = process.env.PUBLIC_ORIGIN || "",
 } = {}) {
   const db = new DatabaseSync(databasePath);
   db.exec(
@@ -90,7 +91,7 @@ export function createApp({
       if (
         req.get("origin") &&
         req.get("origin") !==
-          (process.env.PUBLIC_ORIGIN || `${req.protocol}://${req.get("host")}`)
+          (publicOrigin || `${req.protocol}://${req.get("host")}`)
       )
         return res.status(403).json({ error: "Origin rejected." });
     }

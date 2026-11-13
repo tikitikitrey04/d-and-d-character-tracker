@@ -49,6 +49,25 @@ New-NetFirewallRule -DisplayName "Character Keeper LAN" -Direction Inbound -Acti
 
 Use your configured port if different. Guest Wi-Fi/client isolation can prevent device-to-device access. Docker Desktop must remain running for the app to be available.
 
+### Public HTTPS access through a tunnel or reverse proxy
+
+For production at `https://dnd.everetttang.com`, put these in that deployment's `.env` file or Dockge environment editor, preserving its existing port settings:
+
+```dotenv
+PUBLIC_ORIGIN=https://dnd.everetttang.com
+SECURE_COOKIES=true
+```
+
+Compose explicitly forwards both values to the app container. `PUBLIC_ORIGIN` must match the browser-facing scheme, hostname, and port exactly, with no trailing slash or path. This lets same-origin requests succeed when the proxy connects to the app over internal HTTP. Unrelated origins remain rejected. Leave `PUBLIC_ORIGIN` blank and use `SECURE_COOKIES=false` in the separate local HTTP development deployment.
+
+Apply the updated configuration with `docker compose up -d --build --force-recreate app` from the production stack directory, or redeploy the stack in Dockge. A container restart alone does not apply changed environment variables. To check the values inside the running container without displaying other environment settings:
+
+```sh
+docker compose exec app node -e 'console.log({PUBLIC_ORIGIN:process.env.PUBLIC_ORIGIN,SECURE_COOKIES:process.env.SECURE_COOKIES})'
+```
+
+If **Origin rejected** appears on the public site, check these running values first. A `.env` entry alone does not populate the container unless the Compose service forwards it. When using Dockge with an older Compose file, add `PUBLIC_ORIGIN: "https://dnd.everetttang.com"` directly under `services.app.environment`, set `SECURE_COOKIES: "true"`, and redeploy. Test registration/sign-in through the public HTTPS address; local HTTP is a separate origin when production is configured this way.
+
 ### Persistent accounts and characters
 
 Docker stores SQLite files in the named `keeper-data` volume mounted at `/app/data`. Accounts, sessions, and characters survive container restarts, rebuilds, and `docker compose down`. The volume starts with a new database; your existing host `data/` folder is not automatically imported. Avoid `docker compose down --volumes` unless you intend to delete Docker’s stored data.

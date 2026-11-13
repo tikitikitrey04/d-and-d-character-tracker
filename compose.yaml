@@ -9,6 +9,8 @@ services:
       PORT: "3001"
       # Local-network HTTP. Set true only when accessing through HTTPS.
       SECURE_COOKIES: "${SECURE_COOKIES:-false}"
+      # Browser-facing origin when HTTPS is terminated by a tunnel/proxy.
+      PUBLIC_ORIGIN: "${PUBLIC_ORIGIN:-}"
     volumes:
       - keeper-data:/app/data
     restart: unless-stopped
