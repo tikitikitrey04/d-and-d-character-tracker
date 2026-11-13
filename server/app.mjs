@@ -41,6 +41,7 @@ export function createApp({
       if (route === "/api/admin/logs" && res.statusCode < 400) return;
       const events = {
         "GET /api/me": "session.checked",
+        "POST /api/account/password": "account.password.changed",
         "POST /api/logout": "auth.logout",
         "GET /api/characters": "characters.listed",
         "POST /api/characters": "character.created",
@@ -187,7 +188,13 @@ export function createApp({
           user?.password || `${"0".repeat(32)}:${"0".repeat(128)}`
         ).split(":");
         const derived = await scrypt(password, salt, 64);
-        if (!timingSafeEqual(Buffer.from(stored, "hex"), derived) || !user)
+        if (
+          !timingSafeEqual(Buffer.from(stored, "hex"), derived) ||
+          !user ||
+          !db
+            .prepare("SELECT 1 FROM users WHERE id=? AND password=?")
+            .get(user.id, user.password)
+        )
           return res
             .status(401)
             .json({ error: "Email or password is incorrect." });
@@ -227,6 +234,92 @@ export function createApp({
     next();
   });
   app.get("/api/me", (req, res) => res.json(req.user));
+  const passwordAttempts = new Map();
+  app.post("/api/account/password", async (req, res, next) => {
+    try {
+      const now = Date.now();
+      for (const [id, attempt] of passwordAttempts)
+        if (attempt.until <= now) passwordAttempts.delete(id);
+      const attempt = passwordAttempts.get(req.user.id) || {
+        count: 0,
+        until: now + 15 * 60000,
+      };
+      passwordAttempts.set(req.user.id, attempt);
+      if (++attempt.count > 10)
+        return res
+          .status(429)
+          .json({
+            error:
+              "Too many password change attempts. Try again in 15 minutes.",
+          });
+      const { currentPassword, newPassword } = req.body || {};
+      if (
+        typeof currentPassword !== "string" ||
+        currentPassword.length < 10 ||
+        currentPassword.length > 128 ||
+        typeof newPassword !== "string" ||
+        newPassword.length < 10 ||
+        newPassword.length > 128
+      )
+        return res
+          .status(400)
+          .json({
+            error:
+              "Enter your current password and a new password of 10–128 characters.",
+          });
+      if (newPassword === currentPassword)
+        return res
+          .status(400)
+          .json({ error: "Choose a different new password." });
+      const user = db
+        .prepare("SELECT password FROM users WHERE id=?")
+        .get(req.user.id);
+      const [salt, stored] = user.password.split(":");
+      const currentHash = await scrypt(currentPassword, salt, 64);
+      if (!timingSafeEqual(Buffer.from(stored, "hex"), currentHash))
+        return res
+          .status(400)
+          .json({ error: "Current password is incorrect." });
+      const newSalt = randomBytes(16).toString("hex");
+      const newHash = await scrypt(newPassword, newSalt, 64);
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        // Recheck both credentials and session after the asynchronous hashing.
+        const changed = db
+          .prepare(
+            `UPDATE users SET password=? WHERE id=? AND password=?
+          AND EXISTS (SELECT 1 FROM sessions WHERE token=? AND user_id=? AND expires>?)`,
+          )
+          .run(
+            `${newSalt}:${newHash.toString("hex")}`,
+            req.user.id,
+            user.password,
+            req.sessionToken,
+            req.user.id,
+            Date.now(),
+          );
+        if (!changed.changes) {
+          db.exec("ROLLBACK");
+          return res
+            .status(409)
+            .json({
+              error:
+                "Your account or session changed. Sign in again before retrying.",
+            });
+        }
+        db.prepare("DELETE FROM sessions WHERE user_id=?").run(req.user.id);
+        newSession(res, req.user.id);
+        db.exec("COMMIT");
+      } catch (error) {
+        db.exec("ROLLBACK");
+        res.removeHeader("Set-Cookie");
+        throw error;
+      }
+      res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
   app.get("/api/admin/logs", (req, res) => {
     if (!req.user.isAdmin)
       return res.status(403).json({ error: "Administrator access required." });

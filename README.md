@@ -129,6 +129,12 @@ For a local Node deployment, use `node server/admin.mjs grant YOUR_ACCOUNT_EMAIL
 
 ## Included
 
+### Change your password
+
+Open **Account settings** in the sidebar, or select it from **Navigate** on mobile. Enter your current password, a different new password of 10–128 characters, and the matching confirmation. After a successful change, your current browser stays signed in with a renewed session; all previous sessions are invalidated. Your characters, account details, and admin permissions are preserved.
+
+The change requires an authenticated session and the current password. Passwords are hashed with a fresh salt, and change attempts are limited to 10 per account per 15 minutes. Application logs record the outcome without passwords or tokens. This is a signed-in password change; forgotten-password recovery is not included.
+
 ### Bug reporting
 
 Signed-in players can choose **Report a bug** to submit a title, description, and optional reproduction steps. Their **My reports** list shows only their own reports and their current status. Administrators can open **Admin bugs** to see all player reports, filter by status, and mark them Open, In progress, or Resolved. On mobile, use the **Navigate** dropdown for characters, reports, and admin pages (including Admin logs).
