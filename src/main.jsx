@@ -43,6 +43,7 @@ import BugReports from "./BugReports.jsx";
 import AccountSettings from "./AccountSettings.jsx";
 import HowToUse from "./HowToUse.jsx";
 import CharacterArchive from "./CharacterArchive.jsx";
+import SubclassPicker from "./SubclassPicker.jsx";
 import SpellSlots from "./SpellSlots.jsx";
 import OverviewSpells from "./OverviewSpells.jsx";
 import ThemeToggle, { ThemeProvider } from "./Theme.jsx";
@@ -476,6 +477,10 @@ function Creator({ onClose, onCreate }) {
               maxLength={200}
             />
           </div>
+          <SubclassPicker
+            character={draft}
+            onChange={(value) => set("subclass", value)}
+          />
           <Field
             label="Campaign (optional)"
             value={draft.campaign}
@@ -1403,11 +1408,9 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                     ))}
                   </select>
                 </Field>
-                <Field
-                  label="Subclass"
-                  value={c.subclass}
-                  maxLength={200}
-                  onChange={(e) => set("subclass", e.target.value)}
+                <SubclassPicker
+                  character={c}
+                  onChange={(value) => set("subclass", value)}
                 />
                 <NumberField
                   label="Level"

@@ -147,6 +147,28 @@ const sections = [
     note: "Compare the roll with the target's AC and resolve damage and mastery effects at the table. General Inventory entries do not automatically become equipped weapons.",
   },
   {
+    id: "subclass",
+    title: "Choose a subclass",
+    steps: [
+      <>
+        In the character creator or <strong>Features</strong>, choose a{" "}
+        <strong>Subclass</strong> from your class’s 2024 Player’s Handbook
+        options at level 3 or later.
+      </>,
+      <>
+        Check the reached feature levels and next milestone below the picker.
+        Add subclass abilities to Features and resources, and add granted spells
+        in Spells.
+      </>,
+      <>
+        Use <strong>Custom / other source</strong> for other books or homebrew.
+        Existing names stay intact when changing class or level; review any
+        warning and save your sheet.
+      </>,
+    ],
+    note: "Eldritch Knight and Arcane Trickster spellcasting updates automatically. Other subclass abilities, bonus spells, and combat effects are managed manually.",
+  },
+  {
     id: "level",
     title: "Level up your character",
     steps: [

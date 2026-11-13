@@ -370,6 +370,38 @@ try {
   await page.getByLabel("Character name", { exact: true }).fill("Mira Ashfall");
   await page.getByLabel("Class", { exact: true }).selectOption("Wizard");
   await page.getByLabel("Background", { exact: true }).fill("Sage");
+  assert.equal(
+    await page
+      .getByLabel("Subclass", { exact: true })
+      .locator('option[value="Evoker"]')
+      .isDisabled(),
+    true,
+  );
+  await page.getByLabel("Level", { exact: true }).fill("3");
+  await page.getByLabel("Subclass", { exact: true }).selectOption("Evoker");
+  await page.getByLabel("Class", { exact: true }).selectOption("Fighter");
+  assert.equal(
+    await page.getByLabel("Custom subclass name").inputValue(),
+    "Evoker",
+  );
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Wizard subclass" })
+    .waitFor();
+  await page
+    .getByLabel("Subclass", { exact: true })
+    .selectOption("Eldritch Knight");
+  await page.getByLabel("Class", { exact: true }).selectOption("Wizard");
+  await page.getByLabel("Subclass", { exact: true }).selectOption("Evoker");
+  await page.getByLabel("Subclass", { exact: true }).selectOption("custom");
+  await page.getByLabel("Custom subclass name").fill("School of Homebrew");
+  assert.equal(
+    await page.getByLabel("Custom subclass name").inputValue(),
+    "School of Homebrew",
+  );
+  await page.getByLabel("Subclass", { exact: true }).selectOption("");
+  await page.getByLabel("Level", { exact: true }).fill("1");
+
   await page.screenshot({ path: "artifacts/builder-dark.png" });
   await page
     .getByRole("dialog")
