@@ -36,6 +36,77 @@ test("IDs remain valid and unique when randomUUID is unavailable on LAN HTTP", (
   assert.equal(newId({ randomUUID: () => "native-id" }), "native-id");
 });
 
+test("public HTTPS registration and login work over an internal HTTP proxy connection", async () => {
+  const publicOrigin = "https://dnd.everetttang.com";
+  const { app, db } = createApp({
+    databasePath: ":memory:",
+    secureCookies: true,
+    publicOrigin,
+  });
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise((resolve) => server.once("listening", resolve));
+  async function request(
+    path,
+    { origin = publicOrigin, cookie, body, extraHeaders = {} } = {},
+  ) {
+    const response = await fetch(
+      `http://127.0.0.1:${server.address().port}/api${path}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Keeper-Request": "1",
+          Origin: origin,
+          ...(cookie ? { Cookie: cookie } : {}),
+          ...extraHeaders,
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+      },
+    );
+    return {
+      status: response.status,
+      data: await response.json(),
+      cookie: response.headers.get("set-cookie"),
+    };
+  }
+  try {
+    const credentials = {
+      name: "Remote player",
+      email: "remote@example.com",
+      password: "remote-player-password",
+    };
+    const registered = await request("/auth/register", { body: credentials });
+    assert.equal(registered.status, 200);
+    assert.match(registered.cookie, /; Secure/);
+    const loggedIn = await request("/auth/login", { body: credentials });
+    assert.equal(loggedIn.status, 200);
+    assert.equal(loggedIn.data.id, registered.data.id);
+    const cookie = loggedIn.cookie.split(";")[0];
+    for (const origin of [
+      "https://evil.example",
+      "http://dnd.everetttang.com",
+      "https://dnd.everetttang.com.evil.example",
+      "https://dnd.everetttang.com:444",
+      "null",
+    ]) {
+      const response = await request("/logout", {
+        origin,
+        cookie,
+        extraHeaders: {
+          "X-Forwarded-Host": "dnd.everetttang.com",
+          "X-Forwarded-Proto": "https",
+        },
+      });
+      assert.equal(response.status, 403);
+      assert.equal(response.data.error, "Origin rejected.");
+    }
+    assert.equal((await request("/logout", { cookie })).status, 200);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    db.close();
+  }
+});
+
 test("health check and same-origin LAN HTTP login work with persistent cookies", async () => {
   const { app, db } = createApp({
     databasePath: ":memory:",
