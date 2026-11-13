@@ -1634,6 +1634,25 @@ function App() {
           <ThemeToggle />
         </div>
         <div className="user-block">
+          {user.isAdmin && (
+            <button
+              className="icon-button admin-mobile"
+              aria-label="Admin logs"
+              onClick={() => {
+                if (
+                  selected &&
+                  !window.confirm(
+                    "Open logs? Unsaved sheet changes will be discarded.",
+                  )
+                )
+                  return;
+                setSelected(null);
+                setShowAdmin(true);
+              }}
+            >
+              <ScrollText size={17} />
+            </button>
+          )}
           <div className="avatar">{user.name.charAt(0).toUpperCase()}</div>
           <div>
             <strong>{user.name}</strong>
