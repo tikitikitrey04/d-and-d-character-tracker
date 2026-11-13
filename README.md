@@ -217,11 +217,15 @@ Standard limits cover the eight spellcasting classes plus Eldritch Knight and Ar
 
 Enable **Manual preparation limits** to set custom cantrip and prepared-spell totals (0–200), for multiclassing or house rules. These totals persist and are independent of manual slot overrides. Disabling the override restores class-table limits. The app does not manage rest/level-up replacement timing or every feature’s eligibility restrictions. Existing sheets that exceed a newly lowered limit keep their spells and show a warning; counts already over their limit cannot increase further, but can be reduced and saved. No spells are silently deleted or unprepared. PDF exports include counts, overrides, warnings, and each spell’s known/prepared/granted/Arcanum status.
 
+### JSON character backups
+
+Choose **Export JSON** on a character sheet to download its full current data, including unsaved edits, weapons, spells, inventory, and journal. In **My characters**, choose **Import JSON** and select a Character Keeper export (version 1, up to 5 MB). The imported sheet is saved as a new character in your account and opens immediately; existing characters are never replaced. Account details, character IDs, and archive status are excluded. Import uses the same field validation and preparation/equipment limits as creating a character; rejected files show an error without creating a sheet.
+
 ## Rules scope
 
 This is a **manual character builder and play tracker with an SRD spell picker and automatic spell slots**, not a complete rules engine. Use the [official 2024 free rules](https://www.dndbeyond.com/sources/dnd/br-2024/creating-a-character) to choose legal options. Enter final ability scores including background bonuses, HP, armor class, class features, and equipment yourself. Changing class or level updates proficiency, the spell picker, and automatic slot maximums, but does not automatically grant features, change HP, or remove previously added spells. Apply condition effects, exhaustion, multiclass rules, spellcasting modifiers, rest recovery, and situational bonuses manually. Resources and spell slots can be restored individually. Paid-book spells outside the SRD are not included.
 
-There is no campaign sharing, DM dashboard, email verification, password recovery, or JSON import yet. Accounts are separate players, not a shared party. The app uses Google Fonts with local system-font fallbacks.
+There is no campaign sharing, DM dashboard, email verification, password recovery, yet. Accounts are separate players, not a shared party. The app uses Google Fonts with local system-font fallbacks.
 
 ## Build and verify
 

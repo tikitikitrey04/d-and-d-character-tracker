@@ -18,6 +18,7 @@ import {
   ArrowLeft,
   Trash2,
   Download,
+  Upload,
   Save,
   Flame,
   Compass,
@@ -58,6 +59,27 @@ import {
   preparationSummary,
   spellSource,
 } from "../shared/preparation.mjs";
+import {
+  exportCharacter,
+  importCharacter,
+  characterFilename,
+  MAX_CHARACTER_FILE_BYTES,
+} from "../shared/character-transfer.mjs";
+
+function downloadCharacter(character) {
+  const blob = new Blob([exportCharacter(character)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = characterFilename(character);
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 const SpellPicker = React.lazy(() => import("./SpellPicker.jsx"));
 
 async function api(path, options = {}) {
@@ -796,6 +818,20 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
             <Download size={15} /> Export PDF
           </button>
           <button
+            className="secondary small"
+            title="Download the current sheet, including unsaved changes"
+            onClick={() => {
+              try {
+                downloadCharacter(c);
+                setError("");
+              } catch (e) {
+                setError(e.message);
+              }
+            }}
+          >
+            <Download size={15} /> Export JSON
+          </button>
+          <button
             className="primary small"
             onClick={save}
             disabled={busy || !dirty}
@@ -1461,6 +1497,26 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
 }
 function App() {
   const [page, setPage] = useState("characters");
+  const importInput = useRef(null);
+  const [importing, setImporting] = useState(false);
+  async function importFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setImporting(true);
+    setError("");
+    try {
+      if (file.size > MAX_CHARACTER_FILE_BYTES)
+        throw new Error("Choose a JSON file smaller than 5 MB.");
+      await create(importCharacter(await file.text()));
+      setQuery("");
+      setFilter("All classes");
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setImporting(false);
+    }
+  }
   const [user, setUser] = useState(null),
     [loading, setLoading] = useState(true),
     [characters, setCharacters] = useState([]),
@@ -1834,14 +1890,22 @@ function App() {
                   Every great story starts with a character. Here are yours.
                 </p>
               </div>
-              <div className="vault-heading-actions">
+              <div className="top-actions">
+                <input
+                  ref={importInput}
+                  type="file"
+                  accept=".json,application/json"
+                  aria-label="Import character JSON file"
+                  hidden
+                  onChange={importFile}
+                />
                 <button
                   className="secondary"
-                  aria-label="Character archive"
-                  onClick={() => setPage("archive")}
+                  disabled={importing}
+                  onClick={() => importInput.current.click()}
                 >
-                  <Archive size={17} /> Character archive{" "}
-                  <span className="count">{archivedCharacters.length}</span>
+                  <Upload size={17} />{" "}
+                  {importing ? "Importing…" : "Import JSON"}
                 </button>
                 <button className="primary" onClick={() => setCreating(true)}>
                   <Plus size={17} /> Create character
