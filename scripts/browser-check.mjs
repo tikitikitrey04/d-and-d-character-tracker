@@ -1280,7 +1280,22 @@ try {
     })
     .waitFor();
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByLabel("Navigate", { exact: true }).selectOption("archive");
+  assert.equal(
+    await page
+      .locator(".sidebar")
+      .getByRole("button", { name: "Character archive", exact: true })
+      .count(),
+    0,
+  );
+  assert.equal(
+    await page
+      .locator('select[aria-label="Navigate"] option[value="archive"]')
+      .count(),
+    0,
+  );
+  await page
+    .getByRole("button", { name: "Character archive", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Restore Mira Ashfall", exact: true })
     .waitFor();

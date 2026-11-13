@@ -58,8 +58,9 @@ const sections = [
         out of <strong>My characters</strong>.
       </>,
       <>
-        Open <strong>Character archive</strong> from the sidebar or the mobile{" "}
-        <strong>Navigate</strong> dropdown. Search by name, class, or campaign.
+        On <strong>My characters</strong>, choose{" "}
+        <strong>Character archive</strong>
+        beside Create character. Search by name, class, or campaign.
       </>,
       <>
         Choose <strong>Restore character</strong> to return it to your active
