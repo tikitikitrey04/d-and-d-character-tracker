@@ -49,6 +49,27 @@ const sections = [
     note: "Save before refreshing, changing pages, or signing out. The PDF can include unsaved edits, but exporting does not save them to your account.",
   },
   {
+    id: "archive",
+    title: "Archive and restore characters",
+    steps: [
+      <>
+        Open an inactive character and choose <strong>Archive character</strong>{" "}
+        at the bottom of the sheet. Confirm to save current edits and move it
+        out of <strong>My characters</strong>.
+      </>,
+      <>
+        Open <strong>Character archive</strong> from the sidebar or the mobile{" "}
+        <strong>Navigate</strong> dropdown. Search by name, class, or campaign.
+      </>,
+      <>
+        Choose <strong>Restore character</strong> to return it to your active
+        vault, then open it from <strong>My characters</strong> to play, edit,
+        or export it.
+      </>,
+    ],
+    note: "Archiving keeps the full sheet, including spells, weapons, inventory, and journal. Restore it before editing. Permanent deletion is a separate action on the character sheet.",
+  },
+  {
     id: "spells",
     title: "Add and prepare spells",
     steps: [

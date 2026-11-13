@@ -104,7 +104,7 @@ try {
     name: "Guide topics",
     exact: true,
   });
-  assert.equal(await guideTopics.getByRole("link").count(), 9);
+  assert.equal(await guideTopics.getByRole("link").count(), 10);
   assert.equal(
     await page
       .getByRole("heading", { name: "Administrator tools", exact: true })
@@ -1224,13 +1224,115 @@ try {
       .getByRole("button", { name: "Export PDF", exact: true })
       .isVisible(),
   );
+  // Archiving saves unsaved sheet data and keeps it out of the active vault.
+  page.once("dialog", (dialog) => dialog.dismiss());
+  await page
+    .getByRole("button", { name: "Archive character", exact: true })
+    .click();
+  assert.equal(
+    await page
+      .getByRole("heading", { name: "Mira Ashfall", exact: true })
+      .count(),
+    1,
+  );
+  const failSave = (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Test save failed." }),
+    });
+  await page.route("**/api/characters/*", failSave);
+  page.once("dialog", (dialog) => dialog.accept());
+  await page
+    .getByRole("button", { name: "Archive character", exact: true })
+    .click();
+  await page.getByText("Test save failed.", { exact: true }).waitFor();
+  assert.equal(
+    db.prepare("SELECT COUNT(*) AS n FROM character_archives").get().n,
+    0,
+  );
+  await page.unroute("**/api/characters/*", failSave);
+  page.once("dialog", (dialog) => dialog.accept());
+  await page
+    .getByRole("button", { name: "Archive character", exact: true })
+    .click();
+  await page
+    .getByRole("heading", { name: "Character archive", exact: true })
+    .waitFor();
+  await page
+    .getByRole("button", { name: "Restore Mira Ashfall", exact: true })
+    .waitFor();
+  const archiveRow = db
+    .prepare(
+      "SELECT c.data FROM characters c JOIN character_archives a ON a.character_id=c.id",
+    )
+    .get();
+  assert.equal(JSON.parse(archiveRow.data).notes, exportNotes);
+  assert.ok(JSON.parse(archiveRow.data).weapons.length > 0);
+  assert.ok(JSON.parse(archiveRow.data).spells.length > 0);
+  await page.setViewportSize({ width: 1440, height: 1050 });
+  await page.screenshot({ path: "artifacts/character-archive-desktop.png" });
+  await page.reload();
+  await page
+    .getByRole("heading", {
+      name: "Your first chapter is unwritten.",
+      exact: true,
+    })
+    .waitFor();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByLabel("Navigate", { exact: true }).selectOption("archive");
+  await page
+    .getByRole("button", { name: "Restore Mira Ashfall", exact: true })
+    .waitFor();
+  await page
+    .getByLabel("Search archived characters", { exact: true })
+    .fill("no matches");
+  await page
+    .getByRole("heading", {
+      name: "No archived characters found.",
+      exact: true,
+    })
+    .waitFor();
+  await page.getByRole("button", { name: "Clear search", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Restore Mira Ashfall", exact: true })
+    .waitFor();
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  );
+  await page.screenshot({ path: "artifacts/character-archive-mobile.png" });
+  await page
+    .getByRole("button", { name: "Restore Mira Ashfall", exact: true })
+    .click();
+  await page
+    .getByText("Mira Ashfall restored to My characters.", { exact: true })
+    .waitFor();
+  await page
+    .getByRole("heading", { name: "No archived characters yet.", exact: true })
+    .waitFor();
+  await page
+    .getByRole("button", { name: "Back to characters", exact: true })
+    .click();
+  await page
+    .locator(".character-card")
+    .filter({
+      has: page.getByRole("heading", { name: "Mira Ashfall", exact: true }),
+    })
+    .click();
+  await page.getByRole("button", { name: "Journal", exact: true }).click();
+  assert.equal(
+    await page.getByPlaceholder("Our story begins…").inputValue(),
+    exportNotes,
+  );
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await page.getByRole("heading", { name: "An adventure awaits." }).waitFor();
   assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
   assert.deepEqual(errors, []);
   console.log(
-    "Browser checks passed: desktop/mobile How to use guide, password changes and session invalidation, account settings, bug reporting and admin status updates, admin logs, player accounts, spell and weapon management, casting and attack resource tracking, all six mobile tabs, dark/light themes, and Letter/A4 PDF export.",
+    "Browser checks passed: character archive/restore with unsaved edits and save-failure recovery, desktop/mobile guide, password changes and session invalidation, account settings, bug reporting, admin logs, player accounts, spell and weapon management, all six mobile tabs, themes, and Letter/A4 PDF export.",
   );
 } finally {
   if (browser) await browser.close();

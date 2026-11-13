@@ -2726,3 +2726,40 @@ textarea {
     padding: 20px;
   }
 }
+.archive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+  gap: 20px;
+}
+.archive-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.archive-card h3 {
+  margin: 16px 0 8px;
+  font-size: 24px;
+}
+.archive-card .secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.archive-notice {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+}
+.character-archive .vault-toolbar {
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.character-archive .vault-toolbar input {
+  max-width: 100%;
+}
+.sheet-footer {
+  flex-wrap: wrap;
+  gap: 16px;
+}

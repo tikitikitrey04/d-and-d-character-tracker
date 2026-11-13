@@ -110,6 +110,12 @@ For a local Node deployment, use `node server/admin.mjs grant YOUR_ACCOUNT_EMAIL
 
 ## Included
 
+### Character archive
+
+Open a character and choose **Archive character** at the bottom of the sheet. Confirmation saves the current edits and moves the complete sheet into **Character archive**, separate from the active vault. If saving fails, the character stays active. Open the archive from the sidebar or mobile **Navigate** menu; search by name, class, or campaign and choose **Restore character** to return it to **My characters**. Restore a character before editing, exporting, or permanently deleting it in the sheet.
+
+The archive retains character IDs, stats, spells, weapons, inventory, and journal, and persists in the existing SQLite volume. Archive status is separate from the sheet data, and its table is created automatically on upgrade. Accounts can archive, list, and restore only their own characters. Archiving is not permanent deletion.
+
 ### In-app guide
 
 Open **How to use** in the sidebar or the mobile **Navigate** dropdown for step-by-step guidance on creating characters, saving edits, preparing and casting spells, equipping weapons, leveling up, exporting PDFs, changing passwords, and reporting bugs. The guide has topic links and an administrator section visible to admins.
