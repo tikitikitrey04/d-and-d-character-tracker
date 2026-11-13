@@ -36,7 +36,8 @@ export function createApp({
         return res.status(403).json({ error: "Request rejected." });
       if (
         req.get("origin") &&
-        req.get("origin") !== `${req.protocol}://${req.get("host")}`
+        req.get("origin") !==
+          (process.env.PUBLIC_ORIGIN || `${req.protocol}://${req.get("host")}`)
       )
         return res.status(403).json({ error: "Origin rejected." });
     }
