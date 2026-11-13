@@ -38,6 +38,7 @@ import PrintableCharacter from "./PrintableCharacter.jsx";
 import AdminLogs from "./AdminLogs.jsx";
 import BugReports from "./BugReports.jsx";
 import AccountSettings from "./AccountSettings.jsx";
+import HowToUse from "./HowToUse.jsx";
 import SpellSlots from "./SpellSlots.jsx";
 import OverviewSpells from "./OverviewSpells.jsx";
 import ThemeToggle, { ThemeProvider } from "./Theme.jsx";
@@ -1615,6 +1616,22 @@ function App() {
         >
           <Shield size={18} /> Account settings
         </button>
+        <button
+          className={`sidebar-link ${page === "help" ? "active" : ""}`}
+          onClick={() => {
+            if (
+              selected &&
+              !window.confirm(
+                "Open the guide? Unsaved sheet changes will be discarded.",
+              )
+            )
+              return;
+            setSelected(null);
+            setPage("help");
+          }}
+        >
+          <BookOpen size={18} /> How to use
+        </button>
         <div className="sidebar-callout">
           <div className="tiny-stars">✦ · ✧</div>
           <h3>Make it a good story.</h3>
@@ -1705,6 +1722,7 @@ function App() {
             <option value="characters">My characters</option>
             <option value="report">Report a bug</option>
             <option value="account">Account settings</option>
+            <option value="help">How to use</option>
             {user.isAdmin && (
               <>
                 <option value="logs">Admin logs</option>
@@ -1721,7 +1739,12 @@ function App() {
             </button>
           </div>
         )}
-        {page === "account" ? (
+        {page === "help" ? (
+          <HowToUse
+            isAdmin={user.isAdmin}
+            onBack={() => setPage("characters")}
+          />
+        ) : page === "account" ? (
           <AccountSettings
             api={api}
             email={user.email}

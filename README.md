@@ -110,6 +110,10 @@ For a local Node deployment, use `node server/admin.mjs grant YOUR_ACCOUNT_EMAIL
 
 ## Included
 
+### In-app guide
+
+Open **How to use** in the sidebar or the mobile **Navigate** dropdown for step-by-step guidance on creating characters, saving edits, preparing and casting spells, equipping weapons, leveling up, exporting PDFs, changing passwords, and reporting bugs. The guide has topic links and an administrator section visible to admins.
+
 ### Change your password
 
 Open **Account settings** in the sidebar, or select it from **Navigate** on mobile. Enter your current password, a different new password of 10–128 characters, and the matching confirmation. After a successful change, your current browser stays signed in with a renewed session; all previous sessions are invalidated. Your characters, account details, and admin permissions are preserved.
