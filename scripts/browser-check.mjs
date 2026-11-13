@@ -96,6 +96,94 @@ try {
   await page.getByLabel("Password", { exact: true }).fill("adventure-password");
   await page.getByRole("button", { name: "Begin your adventure" }).click();
   await page.getByRole("heading", { name: "My characters." }).waitFor();
+  // A second browser session must be invalidated by a successful password change.
+  const otherContext = await browser.newContext();
+  const otherLogin = await otherContext.request.post(
+    `http://127.0.0.1:${server.address().port}/api/auth/login`,
+    {
+      headers: { "X-Keeper-Request": "1" },
+      data: { email: "robin@example.com", password: "adventure-password" },
+    },
+  );
+  assert.equal(otherLogin.status(), 200);
+  await page
+    .getByRole("button", { name: "Account settings", exact: true })
+    .click();
+  await page
+    .getByLabel("Current password", { exact: true })
+    .fill("adventure-password");
+  await page
+    .getByLabel("New password", { exact: true })
+    .fill("updated-adventure-password");
+  await page
+    .getByLabel("Confirm new password", { exact: true })
+    .fill("mismatched-password");
+  await page
+    .getByRole("button", { name: "Change password", exact: true })
+    .click();
+  await page
+    .getByText("New passwords do not match.", { exact: true })
+    .waitFor();
+  await page
+    .getByLabel("Current password", { exact: true })
+    .fill("incorrect-password");
+  await page
+    .getByLabel("Confirm new password", { exact: true })
+    .fill("updated-adventure-password");
+  await page
+    .getByRole("button", { name: "Change password", exact: true })
+    .click();
+  await page
+    .getByText("Current password is incorrect.", { exact: true })
+    .waitFor();
+  await page
+    .getByLabel("Current password", { exact: true })
+    .fill("adventure-password");
+  await page
+    .getByRole("button", { name: "Change password", exact: true })
+    .click();
+  await page
+    .getByText("Password changed. Your other sessions have been signed out.", {
+      exact: true,
+    })
+    .waitFor();
+  for (const label of [
+    "Current password",
+    "New password",
+    "Confirm new password",
+  ])
+    assert.equal(
+      await page.getByLabel(label, { exact: true }).inputValue(),
+      "",
+    );
+  assert.equal(
+    (
+      await otherContext.request.get(
+        `http://127.0.0.1:${server.address().port}/api/me`,
+      )
+    ).status(),
+    401,
+  );
+  await otherContext.close();
+  await page.screenshot({ path: "artifacts/account-settings-desktop.png" });
+  await page
+    .getByRole("button", { name: "Back to characters", exact: true })
+    .click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByLabel("Navigate", { exact: true }).selectOption("account");
+  await page
+    .getByRole("heading", { name: "Account settings", exact: true })
+    .waitFor();
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  );
+  await page.screenshot({ path: "artifacts/account-settings-mobile.png" });
+  await page
+    .getByRole("button", { name: "Back to characters", exact: true })
+    .click();
+  await page.setViewportSize({ width: 1440, height: 1050 });
   assert.equal(
     await page.getByRole("button", { name: "Admin logs", exact: true }).count(),
     0,
@@ -1093,7 +1181,7 @@ try {
   assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
   assert.deepEqual(errors, []);
   console.log(
-    "Browser checks passed: bug reporting and admin status updates on desktop/mobile, admin logs, player accounts, spell and weapon management, casting and attack resource tracking, all six mobile tabs, dark/light themes, and Letter/A4 PDF export.",
+    "Browser checks passed: password changes and session invalidation, account settings on desktop/mobile, bug reporting and admin status updates, admin logs, player accounts, spell and weapon management, casting and attack resource tracking, all six mobile tabs, dark/light themes, and Letter/A4 PDF export.",
   );
 } finally {
   if (browser) await browser.close();
