@@ -15,6 +15,8 @@ On Windows PowerShell, use `npm.cmd` if script execution policy blocks `npm`.
 
 Open **http://127.0.0.1:5173**. Vite forwards API requests to the Express server on port 3001. Register an account to begin; no seeded accounts or passwords are included.
 
+The development proxy preserves the browser-facing Host header so same-origin saves, archiving, and other mutations work through Vite. If upgrading from the old proxy configuration, stop and restart `npm run dev` to apply it. Leave `PUBLIC_ORIGIN` unset for local development, and open the address printed by Vite if port 5173 is already in use.
+
 ## Run with Docker on your local network
 
 For a **Mac mini using OrbStack and Dockge**, follow the [Mac deployment guide](docs/mac-mini-dockge.md). It covers stack discovery, LAN access, updates, and transferring existing accounts/characters.
@@ -49,24 +51,19 @@ New-NetFirewallRule -DisplayName "Character Keeper LAN" -Direction Inbound -Acti
 
 Use your configured port if different. Guest Wi-Fi/client isolation can prevent device-to-device access. Docker Desktop must remain running for the app to be available.
 
-### Public HTTPS access through a tunnel or reverse proxy
+### Public origin for HTTPS deployments
 
-For production at `https://dnd.everetttang.com`, put these in that deployment's `.env` file or Dockge environment editor, preserving its existing port settings:
+The production deployment at `https://dnd.everetttang.com` needs `PUBLIC_ORIGIN=https://dnd.everetttang.com` and `SECURE_COOKIES=true` in its `.env` or Dockge environment editor. Keep existing port settings. Compose forwards the public origin into the container so requests from the HTTPS site are accepted even when the tunnel connects internally over HTTP. Use the exact origin with no trailing slash or path.
 
-```dotenv
-PUBLIC_ORIGIN=https://dnd.everetttang.com
-SECURE_COOKIES=true
-```
+For the separate local HTTP development deployment, leave `PUBLIC_ORIGIN` blank and keep `SECURE_COOKIES=false`. An origin configured for the production domain will reject mutations from a different development address.
 
-Compose explicitly forwards both values to the app container. `PUBLIC_ORIGIN` must match the browser-facing scheme, hostname, and port exactly, with no trailing slash or path. This lets same-origin requests succeed when the proxy connects to the app over internal HTTP. Unrelated origins remain rejected. Leave `PUBLIC_ORIGIN` blank and use `SECURE_COOKIES=false` in the separate local HTTP development deployment.
-
-Apply the updated configuration with `docker compose up -d --build --force-recreate app` from the production stack directory, or redeploy the stack in Dockge. A container restart alone does not apply changed environment variables. To check the values inside the running container without displaying other environment settings:
+After changing the configuration, redeploy in Dockge or run `docker compose up -d --build --force-recreate app`. A restart alone does not apply environment changes. To check the running values without dumping other environment settings:
 
 ```sh
 docker compose exec app node -e 'console.log({PUBLIC_ORIGIN:process.env.PUBLIC_ORIGIN,SECURE_COOKIES:process.env.SECURE_COOKIES})'
 ```
 
-If **Origin rejected** appears on the public site, check these running values first. A `.env` entry alone does not populate the container unless the Compose service forwards it. When using Dockge with an older Compose file, add `PUBLIC_ORIGIN: "https://dnd.everetttang.com"` directly under `services.app.environment`, set `SECURE_COOKIES: "true"`, and redeploy. Test registration/sign-in through the public HTTPS address; local HTTP is a separate origin when production is configured this way.
+On an older Compose file, add `PUBLIC_ORIGIN: "https://dnd.everetttang.com"` directly under `services.app.environment` for production and redeploy. This setting applies to registration, saving, archiving, restoring, and other mutations. Unrelated origins remain rejected.
 
 ### Persistent accounts and characters
 
@@ -129,6 +126,16 @@ For a local Node deployment, use `node server/admin.mjs grant YOUR_ACCOUNT_EMAIL
 
 ## Included
 
+### Character archive
+
+Open a character and choose **Archive character** at the bottom of the sheet. Confirmation saves the current edits and moves the complete sheet into **Character archive**, separate from the active vault. If saving fails, the character stays active. Open the archive using **Character archive** beside **Create character** on the **My characters** page (desktop and mobile); search by name, class, or campaign and choose **Restore character** to return it to **My characters**. Restore a character before editing, exporting, or permanently deleting it in the sheet.
+
+The archive retains character IDs, stats, spells, weapons, inventory, and journal, and persists in the existing SQLite volume. Archive status is separate from the sheet data, and its table is created automatically on upgrade. Accounts can archive, list, and restore only their own characters. Archiving is not permanent deletion.
+
+### In-app guide
+
+Open **How to use** in the sidebar or the mobile **Navigate** dropdown for step-by-step guidance on creating characters, saving edits, preparing and casting spells, equipping weapons, leveling up, exporting PDFs, changing passwords, and reporting bugs. The guide has topic links and an administrator section visible to admins.
+
 ### Change your password
 
 Open **Account settings** in the sidebar, or select it from **Navigate** on mobile. Enter your current password, a different new password of 10–128 characters, and the matching confirmation. After a successful change, your current browser stays signed in with a renewed session; all previous sessions are invalidated. Your characters, account details, and admin permissions are preserved.
@@ -160,7 +167,7 @@ Use the **Dark theme / Light theme** button on the sign-in screen or near the bo
 
 ### Export a player sheet
 
-Open a character and click **Export PDF**, then select **Save as PDF** in your browser’s print dialog (or choose a printer for a paper copy). The export includes every sheet section, regardless of the current tab: combat stats, abilities, skills, saves, attacks, resources, spell slots, spells, equipment, features, and journal. It uses a dedicated, ink-friendly layout with selectable text and page breaks for long content. The browser controls paper size and margins; both Letter and A4 work. Turn off browser headers/footers for a clean sheet. Export uses your current edits without saving or changing the character in the database.
+Open a character and choose **Export → PDF**, then select **Save as PDF** in your browser’s print dialog (or choose a printer for a paper copy). The export includes every sheet section, regardless of the current tab: combat stats, abilities, skills, saves, attacks, resources, spell slots, spells, equipment, features, and journal. It uses a dedicated, ink-friendly layout with selectable text and page breaks for long content. The browser controls paper size and margins; both Letter and A4 work. Turn off browser headers/footers for a clean sheet. Export uses your current edits without saving or changing the character in the database.
 
 ### Choose spells
 
@@ -210,11 +217,21 @@ Standard limits cover the eight spellcasting classes plus Eldritch Knight and Ar
 
 Enable **Manual preparation limits** to set custom cantrip and prepared-spell totals (0–200), for multiclassing or house rules. These totals persist and are independent of manual slot overrides. Disabling the override restores class-table limits. The app does not manage rest/level-up replacement timing or every feature’s eligibility restrictions. Existing sheets that exceed a newly lowered limit keep their spells and show a warning; counts already over their limit cannot increase further, but can be reduced and saved. No spells are silently deleted or unprepared. PDF exports include counts, overrides, warnings, and each spell’s known/prepared/granted/Arcanum status.
 
+### JSON character backups
+
+Choose **Export → JSON** on a character sheet to download its full current data, including unsaved edits, weapons, spells, inventory, and journal. In **My characters**, choose **Import JSON** and select a Character Keeper export (version 1, up to 5 MB). The imported sheet is saved as a new character in your account and opens immediately; existing characters are never replaced. Account details, character IDs, and archive status are excluded. Import uses the same field validation and preparation/equipment limits as creating a character; rejected files show an error without creating a sheet.
+
+### Official subclasses
+
+The character creator and **Features → Subclass** offer all 48 subclass names from the **2024 Player’s Handbook**, filtered to the selected class. Official choices unlock at level 3. The picker shows reached subclass feature levels and the next milestone, based on the class’s progression. Names were checked against [Wizards’ 2024 overview](https://www.dndbeyond.com/posts/1810-updates-in-the-players-handbook-2024); progression follows the [2024 class tables](https://www.dndbeyond.com/sources/dnd/br-2024/character-classes).
+
+Use **Custom / other source** for homebrew, older books, or other supplements. Existing names are preserved, including after changing class or lowering level; warnings flag incompatible official names or selections below level 3. Selection persists through saving, archive/restore, JSON, and PDF. Eldritch Knight and Arcane Trickster drive the existing automatic spell slots, preparation limits, and Wizard spell access. Other subclass abilities, resources, bonus spells, and combat effects are entered and resolved manually; selecting a subclass does not grant feature text or change stats automatically.
+
 ## Rules scope
 
 This is a **manual character builder and play tracker with an SRD spell picker and automatic spell slots**, not a complete rules engine. Use the [official 2024 free rules](https://www.dndbeyond.com/sources/dnd/br-2024/creating-a-character) to choose legal options. Enter final ability scores including background bonuses, HP, armor class, class features, and equipment yourself. Changing class or level updates proficiency, the spell picker, and automatic slot maximums, but does not automatically grant features, change HP, or remove previously added spells. Apply condition effects, exhaustion, multiclass rules, spellcasting modifiers, rest recovery, and situational bonuses manually. Resources and spell slots can be restored individually. Paid-book spells outside the SRD are not included.
 
-There is no campaign sharing, DM dashboard, email verification, password recovery, or JSON import yet. Accounts are separate players, not a shared party. The app uses Google Fonts with local system-font fallbacks.
+There is no campaign sharing, DM dashboard, email verification, password recovery, yet. Accounts are separate players, not a shared party. The app uses Google Fonts with local system-font fallbacks.
 
 ## Build and verify
 

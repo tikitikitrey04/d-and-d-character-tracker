@@ -2,7 +2,7 @@ import { chromium } from "@playwright/test";
 import express from "express";
 import { resolve } from "node:path";
 import assert from "node:assert/strict";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { createApp } from "../server/app.mjs";
 import { setAdmin } from "../server/audit.mjs";
 
@@ -96,6 +96,48 @@ try {
   await page.getByLabel("Password", { exact: true }).fill("adventure-password");
   await page.getByRole("button", { name: "Begin your adventure" }).click();
   await page.getByRole("heading", { name: "My characters." }).waitFor();
+  await page.getByRole("button", { name: "How to use", exact: true }).click();
+  await page
+    .getByRole("heading", { name: "How to use", exact: true })
+    .waitFor();
+  const guideTopics = page.getByRole("navigation", {
+    name: "Guide topics",
+    exact: true,
+  });
+  assert.equal(await guideTopics.getByRole("link").count(), 10);
+  assert.equal(
+    await page
+      .getByRole("heading", { name: "Administrator tools", exact: true })
+      .count(),
+    0,
+  );
+  await guideTopics
+    .getByRole("link", { name: "Export a player sheet", exact: true })
+    .click();
+  assert.equal(await page.evaluate(() => location.hash), "#guide-pdf");
+  await page.locator("#guide-pdf").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "artifacts/how-to-use-desktop.png" });
+  await page
+    .getByRole("button", { name: "Back to characters", exact: true })
+    .click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByLabel("Navigate", { exact: true }).selectOption("help");
+  await page
+    .getByRole("heading", { name: "How to use", exact: true })
+    .waitFor();
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  );
+  await page
+    .getByRole("heading", { name: "How to use", exact: true })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "artifacts/how-to-use-mobile.png" });
+  await page
+    .getByRole("button", { name: "Back to characters", exact: true })
+    .click();
+  await page.setViewportSize({ width: 1440, height: 1050 });
   // A second browser session must be invalidated by a successful password change.
   const otherContext = await browser.newContext();
   const otherLogin = await otherContext.request.post(
@@ -221,6 +263,13 @@ try {
     .click();
   setAdmin(db, "robin@example.com", true, audit);
   await page.reload();
+  await page.getByRole("button", { name: "How to use", exact: true }).click();
+  await page
+    .getByRole("heading", { name: "Administrator tools", exact: true })
+    .waitFor();
+  await page
+    .getByRole("button", { name: "Back to characters", exact: true })
+    .click();
   await page.getByRole("button", { name: "Admin bugs", exact: true }).click();
   await page
     .getByRole("heading", { name: "Spell cast button is missing", exact: true })
@@ -321,6 +370,38 @@ try {
   await page.getByLabel("Character name", { exact: true }).fill("Mira Ashfall");
   await page.getByLabel("Class", { exact: true }).selectOption("Wizard");
   await page.getByLabel("Background", { exact: true }).fill("Sage");
+  assert.equal(
+    await page
+      .getByLabel("Subclass", { exact: true })
+      .locator('option[value="Evoker"]')
+      .isDisabled(),
+    true,
+  );
+  await page.getByLabel("Level", { exact: true }).fill("3");
+  await page.getByLabel("Subclass", { exact: true }).selectOption("Evoker");
+  await page.getByLabel("Class", { exact: true }).selectOption("Fighter");
+  assert.equal(
+    await page.getByLabel("Custom subclass name").inputValue(),
+    "Evoker",
+  );
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Wizard subclass" })
+    .waitFor();
+  await page
+    .getByLabel("Subclass", { exact: true })
+    .selectOption("Eldritch Knight");
+  await page.getByLabel("Class", { exact: true }).selectOption("Wizard");
+  await page.getByLabel("Subclass", { exact: true }).selectOption("Evoker");
+  await page.getByLabel("Subclass", { exact: true }).selectOption("custom");
+  await page.getByLabel("Custom subclass name").fill("School of Homebrew");
+  assert.equal(
+    await page.getByLabel("Custom subclass name").inputValue(),
+    "School of Homebrew",
+  );
+  await page.getByLabel("Subclass", { exact: true }).selectOption("");
+  await page.getByLabel("Level", { exact: true }).fill("1");
+
   await page.screenshot({ path: "artifacts/builder-dark.png" });
   await page
     .getByRole("dialog")
@@ -1104,7 +1185,8 @@ try {
       window.dispatchEvent(new Event("afterprint"));
     };
   });
-  await page.getByRole("button", { name: "Export PDF", exact: true }).click();
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  await page.getByRole("button", { name: "PDF", exact: true }).click();
   assert.equal(await page.evaluate(() => window.printCalled), true);
   assert.equal(
     await page.evaluate(() => window.exportTitle),
@@ -1171,17 +1253,178 @@ try {
   await page.emulateMedia({ media: "screen" });
   assert.equal(await printable.isVisible(), false);
   assert.ok(
-    await page
-      .getByRole("button", { name: "Export PDF", exact: true })
-      .isVisible(),
+    await page.getByRole("button", { name: "Export", exact: true }).isVisible(),
   );
+  // Archiving saves unsaved sheet data and keeps it out of the active vault.
+  page.once("dialog", (dialog) => dialog.dismiss());
+  await page
+    .getByRole("button", { name: "Archive character", exact: true })
+    .click();
+  assert.equal(
+    await page
+      .getByRole("heading", { name: "Mira Ashfall", exact: true })
+      .count(),
+    1,
+  );
+  const failSave = (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Test save failed." }),
+    });
+  await page.route("**/api/characters/*", failSave);
   page.once("dialog", (dialog) => dialog.accept());
+  await page
+    .getByRole("button", { name: "Archive character", exact: true })
+    .click();
+  await page.getByText("Test save failed.", { exact: true }).waitFor();
+  assert.equal(
+    db.prepare("SELECT COUNT(*) AS n FROM character_archives").get().n,
+    0,
+  );
+  await page.unroute("**/api/characters/*", failSave);
+  page.once("dialog", (dialog) => dialog.accept());
+  await page
+    .getByRole("button", { name: "Archive character", exact: true })
+    .click();
+  await page
+    .getByRole("heading", { name: "Character archive", exact: true })
+    .waitFor();
+  await page
+    .getByRole("button", { name: "Restore Mira Ashfall", exact: true })
+    .waitFor();
+  const archiveRow = db
+    .prepare(
+      "SELECT c.data FROM characters c JOIN character_archives a ON a.character_id=c.id",
+    )
+    .get();
+  assert.equal(JSON.parse(archiveRow.data).notes, exportNotes);
+  assert.ok(JSON.parse(archiveRow.data).weapons.length > 0);
+  assert.ok(JSON.parse(archiveRow.data).spells.length > 0);
+  await page.setViewportSize({ width: 1440, height: 1050 });
+  await page.screenshot({ path: "artifacts/character-archive-desktop.png" });
+  await page.reload();
+  await page
+    .getByRole("heading", {
+      name: "Your first chapter is unwritten.",
+      exact: true,
+    })
+    .waitFor();
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.equal(
+    await page
+      .locator(".sidebar")
+      .getByRole("button", { name: "Character archive", exact: true })
+      .count(),
+    0,
+  );
+  assert.equal(
+    await page
+      .locator('select[aria-label="Navigate"] option[value="archive"]')
+      .count(),
+    0,
+  );
+  await page
+    .getByRole("button", { name: "Character archive", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Restore Mira Ashfall", exact: true })
+    .waitFor();
+  await page
+    .getByLabel("Search archived characters", { exact: true })
+    .fill("no matches");
+  await page
+    .getByRole("heading", {
+      name: "No archived characters found.",
+      exact: true,
+    })
+    .waitFor();
+  await page.getByRole("button", { name: "Clear search", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Restore Mira Ashfall", exact: true })
+    .waitFor();
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  );
+  await page.screenshot({ path: "artifacts/character-archive-mobile.png" });
+  await page
+    .getByRole("button", { name: "Restore Mira Ashfall", exact: true })
+    .click();
+  await page
+    .getByText("Mira Ashfall restored to My characters.", { exact: true })
+    .waitFor();
+  await page
+    .getByRole("heading", { name: "No archived characters yet.", exact: true })
+    .waitFor();
+  await page
+    .getByRole("button", { name: "Back to characters", exact: true })
+    .click();
+  await page
+    .locator(".character-card")
+    .filter({
+      has: page.getByRole("heading", { name: "Mira Ashfall", exact: true }),
+    })
+    .click();
+  await page.getByRole("button", { name: "Journal", exact: true }).click();
+  assert.equal(
+    await page.getByPlaceholder("Our story begins…").inputValue(),
+    exportNotes,
+  );
+  // Download the current sheet, then import a separate copy through the vault.
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export", exact: true }).click();
+  await page.getByRole("button", { name: "JSON", exact: true }).click();
+  const download = await downloadPromise;
+  assert.equal(download.suggestedFilename(), "Mira-Ashfall.json");
+  const backup = JSON.parse(readFileSync(await download.path(), "utf8"));
+  assert.equal(backup.character.notes, exportNotes);
+  assert.equal(backup.character.id, undefined);
+  page.once("dialog", (dialog) => dialog.accept());
+  await page
+    .getByRole("button", { name: "My characters", exact: true })
+    .click();
+  const fileInput = page.getByLabel("Import character JSON file");
+  await fileInput.setInputFiles({
+    name: "broken.json",
+    mimeType: "application/json",
+    buffer: Buffer.from("{"),
+  });
+  await page.getByRole("alert").filter({ hasText: "not valid JSON" }).waitFor();
+  backup.character.name = "Mira imported";
+  await fileInput.setInputFiles({
+    name: "backup.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(backup)),
+  });
+  await page
+    .getByRole("heading", { name: "Mira imported", exact: true })
+    .waitFor();
+  await page.reload();
+  await page.getByRole("heading", { name: "My characters." }).waitFor();
+  assert.equal(
+    await page
+      .locator(".character-card")
+      .filter({ hasText: "Mira imported" })
+      .count(),
+    1,
+  );
+  assert.equal(
+    await page
+      .locator(".character-card")
+      .filter({
+        has: page.getByRole("heading", { name: "Mira Ashfall", exact: true }),
+      })
+      .count(),
+    1,
+  );
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await page.getByRole("heading", { name: "An adventure awaits." }).waitFor();
   assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
   assert.deepEqual(errors, []);
   console.log(
-    "Browser checks passed: password changes and session invalidation, account settings on desktop/mobile, bug reporting and admin status updates, admin logs, player accounts, spell and weapon management, casting and attack resource tracking, all six mobile tabs, dark/light themes, and Letter/A4 PDF export.",
+    "Browser checks passed: character archive/restore with unsaved edits and save-failure recovery, desktop/mobile guide, password changes and session invalidation, account settings, bug reporting, admin logs, player accounts, spell and weapon management, all six mobile tabs, themes, and Letter/A4 PDF export.",
   );
 } finally {
   if (browser) await browser.close();

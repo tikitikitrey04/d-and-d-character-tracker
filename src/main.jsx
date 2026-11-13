@@ -11,6 +11,7 @@ import {
   Plus,
   LogOut,
   ChevronRight,
+  ChevronDown,
   Check,
   X,
   ScrollText,
@@ -18,11 +19,13 @@ import {
   ArrowLeft,
   Trash2,
   Download,
+  Upload,
   Save,
   Flame,
   Compass,
   Minus,
   Bug,
+  Archive,
 } from "lucide-react";
 import {
   abilities,
@@ -38,6 +41,9 @@ import PrintableCharacter from "./PrintableCharacter.jsx";
 import AdminLogs from "./AdminLogs.jsx";
 import BugReports from "./BugReports.jsx";
 import AccountSettings from "./AccountSettings.jsx";
+import HowToUse from "./HowToUse.jsx";
+import CharacterArchive from "./CharacterArchive.jsx";
+import SubclassPicker from "./SubclassPicker.jsx";
 import SpellSlots from "./SpellSlots.jsx";
 import OverviewSpells from "./OverviewSpells.jsx";
 import ThemeToggle, { ThemeProvider } from "./Theme.jsx";
@@ -55,6 +61,27 @@ import {
   preparationSummary,
   spellSource,
 } from "../shared/preparation.mjs";
+import {
+  exportCharacter,
+  importCharacter,
+  characterFilename,
+  MAX_CHARACTER_FILE_BYTES,
+} from "../shared/character-transfer.mjs";
+
+function downloadCharacter(character) {
+  const blob = new Blob([exportCharacter(character)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = characterFilename(character);
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 const SpellPicker = React.lazy(() => import("./SpellPicker.jsx"));
 
 async function api(path, options = {}) {
@@ -72,6 +99,76 @@ async function api(path, options = {}) {
 }
 import { newId } from "../shared/id.mjs";
 const uid = newId;
+function ExportButton({ onJSON, onPDF }) {
+  const [open, setOpen] = useState(false);
+  const container = useRef(null);
+  const trigger = useRef(null);
+  const optionsId = useId();
+  useEffect(() => {
+    if (!open) return;
+    function dismiss(event) {
+      if (!container.current?.contains(event.target)) setOpen(false);
+    }
+    function escape(event) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        trigger.current?.focus();
+      }
+    }
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [open]);
+  function choose(action) {
+    setOpen(false);
+    trigger.current?.focus();
+    action();
+  }
+  return (
+    <div
+      className="export-dropdown"
+      ref={container}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+      }}
+    >
+      <button
+        ref={trigger}
+        className="secondary small"
+        aria-expanded={open}
+        aria-controls={optionsId}
+        onClick={() => setOpen(!open)}
+      >
+        <Download size={15} /> Export <ChevronDown size={14} />
+      </button>
+      {open && (
+        <div
+          id={optionsId}
+          className="export-options"
+          role="group"
+          aria-label="Export format"
+        >
+          <button
+            onClick={() => choose(onJSON)}
+            title="Download the current sheet, including unsaved changes"
+          >
+            JSON
+          </button>
+          <button
+            onClick={() => choose(onPDF)}
+            title="Open the print dialog, then choose Save as PDF"
+          >
+            PDF
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Field({ label, children, ...props }) {
   const id = useId();
   return (
@@ -380,6 +477,10 @@ function Creator({ onClose, onCreate }) {
               maxLength={200}
             />
           </div>
+          <SubclassPicker
+            character={draft}
+            onChange={(value) => set("subclass", value)}
+          />
           <Field
             label="Campaign (optional)"
             value={draft.campaign}
@@ -663,7 +764,7 @@ function RecordList({ title, items, onChange, type, addForm, character }) {
     </section>
   );
 }
-function Sheet({ character, onSave, onBack, onDelete }) {
+function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
   const [c, setC] = useState(() => normalizeCharacterSlots(character)),
     [tab, setTab] = useState("Overview"),
     [busy, setBusy] = useState(false),
@@ -785,13 +886,17 @@ function Sheet({ character, onSave, onBack, onDelete }) {
               </>
             )}
           </span>
-          <button
-            className="secondary small"
-            onClick={exportSheet}
-            title="Open the print dialog, then choose Save as PDF"
-          >
-            <Download size={15} /> Export PDF
-          </button>
+          <ExportButton
+            onPDF={exportSheet}
+            onJSON={() => {
+              try {
+                downloadCharacter(c);
+                setError("");
+              } catch (e) {
+                setError(e.message);
+              }
+            }}
+          />
           <button
             className="primary small"
             onClick={save}
@@ -1303,11 +1408,9 @@ function Sheet({ character, onSave, onBack, onDelete }) {
                     ))}
                   </select>
                 </Field>
-                <Field
-                  label="Subclass"
-                  value={c.subclass}
-                  maxLength={200}
-                  onChange={(e) => set("subclass", e.target.value)}
+                <SubclassPicker
+                  character={c}
+                  onChange={(value) => set("subclass", value)}
                 />
                 <NumberField
                   label="Level"
@@ -1398,6 +1501,28 @@ function Sheet({ character, onSave, onBack, onDelete }) {
           <Shield size={13} /> Your sheet is private to your account.
         </span>
         <button
+          className="text-button"
+          disabled={busy}
+          onClick={async () => {
+            if (
+              !window.confirm(
+                `Save and archive ${c.name}? Its full sheet will be kept in your archive and can be restored later.`,
+              )
+            )
+              return;
+            setBusy(true);
+            setError("");
+            try {
+              await onArchive(c);
+            } catch (e) {
+              setError(e.message);
+              setBusy(false);
+            }
+          }}
+        >
+          <Archive size={13} /> Archive character
+        </button>
+        <button
           className="text-button danger"
           disabled={busy}
           onClick={async () => {
@@ -1436,9 +1561,30 @@ function Sheet({ character, onSave, onBack, onDelete }) {
 }
 function App() {
   const [page, setPage] = useState("characters");
+  const importInput = useRef(null);
+  const [importing, setImporting] = useState(false);
+  async function importFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setImporting(true);
+    setError("");
+    try {
+      if (file.size > MAX_CHARACTER_FILE_BYTES)
+        throw new Error("Choose a JSON file smaller than 5 MB.");
+      await create(importCharacter(await file.text()));
+      setQuery("");
+      setFilter("All classes");
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setImporting(false);
+    }
+  }
   const [user, setUser] = useState(null),
     [loading, setLoading] = useState(true),
     [characters, setCharacters] = useState([]),
+    [archivedCharacters, setArchivedCharacters] = useState([]),
     [selected, setSelected] = useState(null),
     [creating, setCreating] = useState(false),
     [error, setError] = useState(""),
@@ -1454,8 +1600,11 @@ function App() {
   }, []);
   useEffect(() => {
     if (user)
-      api("/characters")
-        .then(setCharacters)
+      Promise.all([api("/characters"), api("/characters?archived=true")])
+        .then(([active, archived]) => {
+          setCharacters(active);
+          setArchivedCharacters(archived);
+        })
         .catch((e) => setError(e.message));
   }, [user]);
   async function create(c) {
@@ -1480,6 +1629,25 @@ function App() {
     setCharacters((prev) => prev.filter((v) => v.id !== id));
     setSelected(null);
   }
+  async function archive(c) {
+    // Save current edits before moving the sheet, so no in-browser progress is lost.
+    const saved = await save(c);
+    const archived = await api(`/characters/${saved.id}/archive`, {
+      method: "POST",
+    });
+    setCharacters((prev) => prev.filter((v) => v.id !== saved.id));
+    setArchivedCharacters((prev) => [
+      archived,
+      ...prev.filter((v) => v.id !== saved.id),
+    ]);
+    setSelected(null);
+    setPage("archive");
+  }
+  async function restore(id) {
+    const restored = await api(`/characters/${id}/restore`, { method: "POST" });
+    setArchivedCharacters((prev) => prev.filter((v) => v.id !== id));
+    setCharacters((prev) => [restored, ...prev.filter((v) => v.id !== id)]);
+  }
   async function logout() {
     if (
       selected &&
@@ -1492,6 +1660,7 @@ function App() {
       setPage("characters");
       setSelected(null);
       setCharacters([]);
+      setArchivedCharacters([]);
     } catch (e) {
       setError(e.message);
     }
@@ -1532,7 +1701,7 @@ function App() {
         <Brand />
         <div className="sidebar-section">YOUR ADVENTURES</div>
         <button
-          className={`sidebar-link ${page === "characters" ? "active" : ""}`}
+          className={`sidebar-link ${["characters", "archive"].includes(page) ? "active" : ""}`}
           onClick={() => {
             if (
               !selected ||
@@ -1615,6 +1784,22 @@ function App() {
         >
           <Shield size={18} /> Account settings
         </button>
+        <button
+          className={`sidebar-link ${page === "help" ? "active" : ""}`}
+          onClick={() => {
+            if (
+              selected &&
+              !window.confirm(
+                "Open the guide? Unsaved sheet changes will be discarded.",
+              )
+            )
+              return;
+            setSelected(null);
+            setPage("help");
+          }}
+        >
+          <BookOpen size={18} /> How to use
+        </button>
         <div className="sidebar-callout">
           <div className="tiny-stars">✦ · ✧</div>
           <h3>Make it a good story.</h3>
@@ -1689,7 +1874,7 @@ function App() {
           Navigate
           <select
             aria-label="Navigate"
-            value={page}
+            value={page === "archive" ? "characters" : page}
             onChange={(e) => {
               if (
                 selected &&
@@ -1705,6 +1890,7 @@ function App() {
             <option value="characters">My characters</option>
             <option value="report">Report a bug</option>
             <option value="account">Account settings</option>
+            <option value="help">How to use</option>
             {user.isAdmin && (
               <>
                 <option value="logs">Admin logs</option>
@@ -1721,7 +1907,18 @@ function App() {
             </button>
           </div>
         )}
-        {page === "account" ? (
+        {page === "archive" ? (
+          <CharacterArchive
+            characters={archivedCharacters}
+            onRestore={restore}
+            onBack={() => setPage("characters")}
+          />
+        ) : page === "help" ? (
+          <HowToUse
+            isAdmin={user.isAdmin}
+            onBack={() => setPage("characters")}
+          />
+        ) : page === "account" ? (
           <AccountSettings
             api={api}
             email={user.email}
@@ -1742,6 +1939,7 @@ function App() {
             character={selected}
             onSave={save}
             onDelete={remove}
+            onArchive={archive}
             onBack={() => setSelected(null)}
           />
         ) : (
@@ -1756,9 +1954,27 @@ function App() {
                   Every great story starts with a character. Here are yours.
                 </p>
               </div>
-              <button className="primary" onClick={() => setCreating(true)}>
-                <Plus size={17} /> Create character
-              </button>
+              <div className="top-actions">
+                <input
+                  ref={importInput}
+                  type="file"
+                  accept=".json,application/json"
+                  aria-label="Import character JSON file"
+                  hidden
+                  onChange={importFile}
+                />
+                <button
+                  className="secondary"
+                  disabled={importing}
+                  onClick={() => importInput.current.click()}
+                >
+                  <Upload size={17} />{" "}
+                  {importing ? "Importing…" : "Import JSON"}
+                </button>
+                <button className="primary" onClick={() => setCreating(true)}>
+                  <Plus size={17} /> Create character
+                </button>
+              </div>
             </header>
             <section className="welcome-banner">
               <div>

@@ -28,6 +28,9 @@ export function createApp({
   const app = express();
   db.exec("PRAGMA busy_timeout=5000;");
   const audit = initializeAudit(db);
+  db.exec(`CREATE TABLE IF NOT EXISTS character_archives (
+    character_id TEXT PRIMARY KEY REFERENCES characters(id) ON DELETE CASCADE,
+    archived TEXT NOT NULL);`);
   app.disable("x-powered-by");
   app.get("/healthz", (req, res) => {
     db.prepare("SELECT 1").get();
@@ -47,6 +50,8 @@ export function createApp({
         "POST /api/characters": "character.created",
         "PUT /api/characters/:id": "character.updated",
         "DELETE /api/characters/:id": "character.deleted",
+        "POST /api/characters/:id/archive": "character.archived",
+        "POST /api/characters/:id/restore": "character.restored",
         "GET /api/admin/logs": "admin.logs",
         "POST /api/bugs": "bug.submitted",
         "GET /api/bugs": "bugs.listed",
@@ -246,12 +251,9 @@ export function createApp({
       };
       passwordAttempts.set(req.user.id, attempt);
       if (++attempt.count > 10)
-        return res
-          .status(429)
-          .json({
-            error:
-              "Too many password change attempts. Try again in 15 minutes.",
-          });
+        return res.status(429).json({
+          error: "Too many password change attempts. Try again in 15 minutes.",
+        });
       const { currentPassword, newPassword } = req.body || {};
       if (
         typeof currentPassword !== "string" ||
@@ -261,12 +263,10 @@ export function createApp({
         newPassword.length < 10 ||
         newPassword.length > 128
       )
-        return res
-          .status(400)
-          .json({
-            error:
-              "Enter your current password and a new password of 10–128 characters.",
-          });
+        return res.status(400).json({
+          error:
+            "Enter your current password and a new password of 10–128 characters.",
+        });
       if (newPassword === currentPassword)
         return res
           .status(400)
@@ -300,12 +300,10 @@ export function createApp({
           );
         if (!changed.changes) {
           db.exec("ROLLBACK");
-          return res
-            .status(409)
-            .json({
-              error:
-                "Your account or session changed. Sign in again before retrying.",
-            });
+          return res.status(409).json({
+            error:
+              "Your account or session changed. Sign in again before retrying.",
+          });
         }
         db.prepare("DELETE FROM sessions WHERE user_id=?").run(req.user.id);
         newSession(res, req.user.id);
@@ -355,20 +353,58 @@ export function createApp({
     res.setHeader("Set-Cookie", cookie("", 0));
     res.json({ ok: true });
   });
-  app.get("/api/characters", (req, res) =>
+  app.get("/api/characters", (req, res) => {
+    if (
+      Object.keys(req.query).some((key) => key !== "archived") ||
+      (req.query.archived !== undefined &&
+        !["true", "false"].includes(req.query.archived))
+    )
+      return res.status(400).json({ error: "Invalid character filter." });
+    const archived = req.query.archived === "true";
     res.json(
       db
         .prepare(
-          "SELECT id,data,updated FROM characters WHERE user_id=? ORDER BY updated DESC",
+          `SELECT c.id,c.data,c.updated,a.archived FROM characters c
+           LEFT JOIN character_archives a ON a.character_id=c.id
+           WHERE c.user_id=? AND ${archived ? "a.character_id IS NOT NULL" : "a.character_id IS NULL"}
+           ORDER BY ${archived ? "a.archived" : "c.updated"} DESC, c.id`,
         )
         .all(req.user.id)
         .map((row) => ({
           ...normalizeCharacterSlots(JSON.parse(row.data)),
           id: row.id,
           updated: row.updated,
+          ...(archived ? { archivedAt: row.archived } : {}),
         })),
-    ),
-  );
+    );
+  });
+  for (const action of ["archive", "restore"]) {
+    app.post(`/api/characters/:id/${action}`, (req, res) => {
+      const row = db
+        .prepare(
+          "SELECT id,data,updated FROM characters WHERE id=? AND user_id=?",
+        )
+        .get(req.params.id, req.user.id);
+      if (!row) return res.status(404).json({ error: "Character not found." });
+      if (action === "archive")
+        db.prepare(
+          "INSERT OR IGNORE INTO character_archives (character_id,archived) VALUES (?,?)",
+        ).run(row.id, new Date().toISOString());
+      else
+        db.prepare("DELETE FROM character_archives WHERE character_id=?").run(
+          row.id,
+        );
+      const archive = db
+        .prepare("SELECT archived FROM character_archives WHERE character_id=?")
+        .get(row.id);
+      res.json({
+        ...normalizeCharacterSlots(JSON.parse(row.data)),
+        id: row.id,
+        updated: row.updated,
+        ...(archive ? { archivedAt: archive.archived } : {}),
+      });
+    });
+  }
   app.post("/api/characters", (req, res) => {
     if (!validateCharacter(req.body))
       return res.status(400).json({
@@ -400,10 +436,17 @@ export function createApp({
     const updated = new Date().toISOString();
     const character = normalizeCharacterSlots(req.body);
     const previous = db
-      .prepare("SELECT data FROM characters WHERE id=? AND user_id=?")
+      .prepare(
+        `SELECT data, EXISTS(SELECT 1 FROM character_archives WHERE character_id=characters.id) AS archived
+        FROM characters WHERE id=? AND user_id=?`,
+      )
       .get(req.params.id, req.user.id);
     if (!previous)
       return res.status(404).json({ error: "Character not found." });
+    if (previous.archived)
+      return res
+        .status(409)
+        .json({ error: "Restore this character before editing it." });
     const preparationError = preparationIncreaseError(
       character,
       JSON.parse(previous.data),
