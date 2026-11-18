@@ -161,7 +161,7 @@ Reports persist in SQLite alongside accounts and characters; the database table 
 - Responsive desktop and mobile layouts.
 - Light/dark themes with a persistent browser preference and system-theme default. PDF exports remain light and printer-friendly.
 
-Character records live in `data/keeper.sqlite` (created automatically, excluded from Git). Back up this directory with the server stopped. Character edits stay in the browser until **Save character** is pressed. Export includes the current unsaved values.
+Character records live in `data/keeper.sqlite` (created automatically, excluded from Git). Back up this directory with the server stopped. Character edits save automatically about one second after the last change. Wait for **All changes saved** before leaving, refreshing, or signing out; **Save character** saves immediately or retries a failed save. Failed saves keep edits on the open sheet and show an error. Requests run one at a time, including when you edit during a save; the latest changes are saved next. Export includes the current unsaved values.
 
 Use the **Dark theme / Light theme** button on the sign-in screen or near the bottom of the sidebar to switch appearance. On mobile it is a sun/moon icon in the top bar. The preference is stored in this browser, independently of the player account. Until a theme is selected, the app follows system appearance; it also responds to system changes and synchronizes explicit selections across tabs. If browser storage is unavailable, switching still works for the current page.
 
@@ -191,7 +191,7 @@ Below Skills & saving throws, each ready spell appears **once under its base lev
 
 Overview and Spells update together immediately. Buttons for depleted slot levels remain visible but disabled; casting never falls back to another level. Ready spells without a matching slot pool remain listed under their base level with casting disabled. Always-prepared feature spells use slots normally; feature-specific free casts, ritual casting, and other exceptional casting methods remain manual.
 
-Warlocks use their Pact Magic pool for ordinary spells. An unlocked Mystic Arcanum spell instead expends its independent once-per-Long-Rest use without changing slots. **Restore after Long Rest** resets that spell’s use after the player has taken the rest. Spell descriptions and PDF status reflect the same character data; casting does not roll attacks/damage or automatically apply effects. Use **Save character** to persist slot expenditure and Arcanum usage, like other sheet edits.
+Warlocks use their Pact Magic pool for ordinary spells. An unlocked Mystic Arcanum spell instead expends its independent once-per-Long-Rest use without changing slots. **Restore after Long Rest** resets that spell’s use after the player has taken the rest. Spell descriptions and PDF status reflect the same character data; casting does not roll attacks/damage or automatically apply effects. Slot expenditure and Arcanum usage autosave, like other sheet edits. Use **Save character** to save immediately.
 
 ### Weapons, mastery, and attacks
 
@@ -240,6 +240,8 @@ npm test
 npm run build
 npm start
 ```
+
+Run `npm run test:autosave-browser` for focused autosave checks, including edits during a slow save and recovery from a failed request. Both browser checks use installed Google Chrome by default; set `PLAYWRIGHT_BROWSER_CHANNEL=chromium` to use a Playwright-installed Chromium instead.
 
 Run `npm run test:browser` to test the full player flow in an installed Google Chrome. It uses an isolated in-memory database and writes desktop/mobile screenshots to the ignored `artifacts/` directory.
 

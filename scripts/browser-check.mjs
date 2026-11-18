@@ -6,6 +6,15 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { createApp } from "../server/app.mjs";
 import { setAdmin } from "../server/audit.mjs";
 
+async function saveCharacter(page) {
+  const button = page.getByRole("button", {
+    name: "Save character",
+    exact: true,
+  });
+  if (await button.isEnabled()) await button.click();
+  await page.getByText("All changes saved", { exact: true }).waitFor();
+}
+
 // An isolated database keeps QA accounts and characters out of the player's data.
 const { app, db, audit } = createApp({
   databasePath: ":memory:",
@@ -17,7 +26,7 @@ await new Promise((resolve) => server.once("listening", resolve));
 let browser;
 try {
   browser = await chromium.launch({
-    channel: "chrome",
+    channel: process.env.PLAYWRIGHT_BROWSER_CHANNEL || "chrome",
     headless: true,
     args: [
       "--host-resolver-rules=MAP character-keeper.test 127.0.0.1",
@@ -104,7 +113,7 @@ try {
     name: "Guide topics",
     exact: true,
   });
-  assert.equal(await guideTopics.getByRole("link").count(), 10);
+  assert.equal(await guideTopics.getByRole("link").count(), 12);
   assert.equal(
     await page
       .getByRole("heading", { name: "Administrator tools", exact: true })
@@ -599,9 +608,7 @@ try {
   await page
     .getByPlaceholder("Our story begins…")
     .fill("Found a silver key beneath the old oak.");
-  await page
-    .getByRole("button", { name: "Save character", exact: true })
-    .click();
+  await saveCharacter(page);
   await page.getByText("All changes saved", { exact: true }).waitFor();
   await page
     .getByRole("button", { name: "My characters", exact: true })
@@ -717,9 +724,7 @@ try {
     await page.getByLabel("Level 1", { exact: true }).isEditable(),
     false,
   );
-  await page
-    .getByRole("button", { name: "Save character", exact: true })
-    .click();
+  await saveCharacter(page);
   await page.getByText("All changes saved", { exact: true }).waitFor();
   await page
     .getByRole("button", { name: "My characters", exact: true })
@@ -913,9 +918,7 @@ try {
       })
       .isDisabled(),
   );
-  await page
-    .getByRole("button", { name: "Save character", exact: true })
-    .click();
+  await saveCharacter(page);
   await page.getByText("All changes saved", { exact: true }).waitFor();
   await page
     .getByRole("button", { name: "My characters", exact: true })
@@ -999,9 +1002,7 @@ try {
     await overviewSpells.locator(".cast-feedback").innerText(),
     /level 3 spell slot/,
   );
-  await page
-    .getByRole("button", { name: "Save character", exact: true })
-    .click();
+  await saveCharacter(page);
   await page.getByText("All changes saved", { exact: true }).waitFor();
   await page
     .getByRole("button", { name: "My characters", exact: true })
@@ -1135,7 +1136,7 @@ try {
   await page.getByLabel("Prepared spell limit", { exact: true }).fill("1");
   await page.getByRole("button", { name: "Overview", exact: true }).click();
   await page.getByTitle("Roll Strength", { exact: true }).click();
-  await page.getByRole("status").waitFor();
+  await page.locator(".roll-toast").waitFor();
   mkdirSync("artifacts", { recursive: true });
   await page.screenshot({
     path: "artifacts/character-desktop.png",

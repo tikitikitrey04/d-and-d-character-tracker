@@ -44,6 +44,7 @@ import AccountSettings from "./AccountSettings.jsx";
 import HowToUse from "./HowToUse.jsx";
 import CharacterArchive from "./CharacterArchive.jsx";
 import SubclassPicker from "./SubclassPicker.jsx";
+import useAutosave from "./useAutosave.jsx";
 import SpellSlots from "./SpellSlots.jsx";
 import OverviewSpells from "./OverviewSpells.jsx";
 import ThemeToggle, { ThemeProvider } from "./Theme.jsx";
@@ -767,13 +768,25 @@ function RecordList({ title, items, onChange, type, addForm, character }) {
 function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
   const [c, setC] = useState(() => normalizeCharacterSlots(character)),
     [tab, setTab] = useState("Overview"),
-    [busy, setBusy] = useState(false),
+    [actionBusy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [saved, setSaved] = useState(() => normalizeCharacterSlots(character)),
     [roll, setRoll] = useState(""),
     [castMessage, setCastMessage] = useState(""),
     [weaponMessage, setWeaponMessage] = useState(""),
     [amount, setAmount] = useState(1);
+  const autosave = useAutosave(
+    c,
+    onSave,
+    (result, snapshot) => {
+      setC((current) =>
+        JSON.stringify(current) === JSON.stringify(snapshot) ? result : current,
+      );
+      setSaved(result);
+    },
+    actionBusy,
+  );
+  const busy = actionBusy || autosave.phase === "saving";
   const dirty = JSON.stringify(c) !== JSON.stringify(saved);
   useEffect(() => {
     const handler = (e) => {
@@ -836,20 +849,9 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
     setError("");
     set("spells", spells);
   }
-  async function save() {
-    setBusy(true);
+  function save() {
     setError("");
-    try {
-      const result = await onSave(c);
-      setC((current) =>
-        JSON.stringify(current) === JSON.stringify(c) ? result : current,
-      );
-      setSaved(result);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
+    void autosave.flush();
   }
   function back() {
     if (
@@ -877,9 +879,17 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
           <ArrowLeft size={15} /> My characters
         </button>
         <div className="top-actions">
-          <span className={dirty ? "save-status unsaved" : "save-status"}>
-            {dirty ? (
-              "Unsaved changes"
+          <span
+            role="status"
+            aria-live="polite"
+            className={dirty ? "save-status unsaved" : "save-status"}
+          >
+            {autosave.phase === "saving" ? (
+              "Saving…"
+            ) : autosave.phase === "error" && dirty ? (
+              "Not saved"
+            ) : dirty ? (
+              "Changes waiting to save…"
             ) : (
               <>
                 <Check size={13} /> All changes saved
@@ -907,6 +917,12 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
           </button>
         </div>
       </div>
+      {autosave.error && dirty && (
+        <p className="error" role="alert">
+          Autosave failed: {autosave.error} Your edits are still here. Use Save
+          character to retry.
+        </p>
+      )}
       {error && (
         <p className="error" role="alert">
           {error}
@@ -1491,7 +1507,7 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
             />
             <div className="journal-footer">
               <span>{c.notes.length.toLocaleString()} / 20,000 characters</span>
-              <span>Remember to save your character</span>
+              <span>Changes save automatically after a short pause</span>
             </div>
           </section>
         )}
