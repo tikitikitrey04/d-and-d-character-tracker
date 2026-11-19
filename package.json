@@ -14,7 +14,8 @@
     "start": "node server/index.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:browser": "npm run build && node scripts/browser-check.mjs",
-    "format": "prettier --write src server shared scripts tests package.json vite.config.js index.html README.md"
+    "format": "prettier --write src server shared scripts tests package.json vite.config.js index.html README.md",
+    "test:autosave-browser": "npm run build && node scripts/autosave-browser-check.mjs"
   },
   "dependencies": {
     "express": "^5.1.0",

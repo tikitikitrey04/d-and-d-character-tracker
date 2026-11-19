@@ -21,7 +21,7 @@ const sections = [
         and <strong>Weapons</strong>, and spells in <strong>Spells</strong>.
       </>,
       <>
-        Click <strong>Save character</strong>. Your account keeps its own
+        Edits save automatically after a short pause. Your account keeps its own
         private character vault.
       </>,
     ],
@@ -41,12 +41,13 @@ const sections = [
         <strong>Journal</strong> for adventure notes.
       </>,
       <>
-        Click <strong>Save character</strong> after editing your sheet, casting
-        a spell, attacking, or changing resource counts. These changes are not
-        saved automatically.
+        Sheet edits, spell casting, attacks, and resource changes save
+        automatically about one second after your last edit. Watch for{" "}
+        <strong>All changes saved</strong>. Use <strong>Save character</strong>{" "}
+        to save immediately or retry a failed save.
       </>,
     ],
-    note: "Save before refreshing, changing pages, or signing out. The PDF can include unsaved edits, but exporting does not save them to your account.",
+    note: "Wait for All changes saved before refreshing, changing pages, or signing out. If saving fails, your edits stay on the open sheet; retry with Save character. Export includes current edits but does not save them to your account.",
   },
   {
     id: "archive",
@@ -292,8 +293,9 @@ export default function HowToUse({ onBack, isAdmin }) {
         </button>
       </header>
       <aside className="guide-save-note">
-        <strong>Remember to save.</strong> Character edits and resource use stay
-        in this browser until you click <strong>Save character</strong>.
+        <strong>Autosave is on.</strong> Wait for{" "}
+        <strong>All changes saved</strong> before leaving your sheet. Use{" "}
+        <strong>Save character</strong> to save now or retry.
       </aside>
       <nav className="guide-topics" aria-label="Guide topics">
         {sections.map(({ id, title }) => (
