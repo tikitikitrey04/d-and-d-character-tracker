@@ -1,3 +1,4 @@
+import NumberInput from "./NumberInput.jsx";
 import React from "react";
 import { characterStats } from "../shared/stats.mjs";
 
@@ -26,8 +27,7 @@ export default function StatSettings({ character: c, onChange }) {
         </label>
         <label>
           AC adjustment (magic, traits, effects)
-          <input
-            type="number"
+          <NumberInput
             min={-20}
             max={20}
             value={c.acAdjustment || 0}
