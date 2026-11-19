@@ -36,6 +36,8 @@ import {
   signed,
   proficiency,
 } from "../shared/character.mjs";
+import { characterStats } from "../shared/stats.mjs";
+import StatSettings from "./StatSettings.jsx";
 import "./styles.css";
 import PrintableCharacter from "./PrintableCharacter.jsx";
 import AdminLogs from "./AdminLogs.jsx";
@@ -801,6 +803,7 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
   const set = (k, v) =>
     setC((prev) => normalizeCharacterSlots({ ...prev, [k]: v }));
   const prof = proficiency(c.level);
+  const stats = characterStats(c);
   function changeWeapons(patch) {
     const next = { ...c, ...patch };
     const error = weaponChangeError(next, c);
@@ -1039,23 +1042,26 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                   type="number"
                   min={0}
                   max={99}
-                  value={c.ac}
+                  value={stats.ac}
+                  readOnly={c.acMode === "auto"}
                   onChange={(e) =>
                     set("ac", Math.max(0, Math.min(99, Number(e.target.value))))
                   }
                 />
-                <span className="muted">Defense</span>
+                <span className="muted">
+                  {c.acMode === "auto"
+                    ? stats.acSource
+                    : "Manual AC · configure in Equipment"}
+                </span>
               </div>
               <button
                 className="stat-card roll-stat"
-                onClick={() => dice("Initiative", modifier(c.abilities[1]))}
+                onClick={() => dice("Initiative", stats.initiative)}
               >
                 <div className="stat-label">
                   <Dices size={16} /> INITIATIVE
                 </div>
-                <strong className="big-stat">
-                  {signed(modifier(c.abilities[1]))}
-                </strong>
+                <strong className="big-stat">{signed(stats.initiative)}</strong>
                 <span className="muted">Roll initiative ↗</span>
               </button>
               <div className="stat-card">
@@ -1137,18 +1143,9 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                         />
                         <span>{name.slice(0, 3).toUpperCase()}</span>
                         <button
-                          onClick={() =>
-                            dice(
-                              `${name} save`,
-                              modifier(c.abilities[i]) +
-                                (c.saves.includes(i) ? prof : 0),
-                            )
-                          }
+                          onClick={() => dice(`${name} save`, stats.saves[i])}
                         >
-                          {signed(
-                            modifier(c.abilities[i]) +
-                              (c.saves.includes(i) ? prof : 0),
-                          )}
+                          {signed(stats.saves[i])}
                         </button>
                       </label>
                     ))}
@@ -1176,29 +1173,16 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                         </span>
                         <button
                           className="skill-bonus"
-                          onClick={() =>
-                            dice(
-                              name,
-                              modifier(c.abilities[index]) +
-                                prof * (c.skills[name] || 0),
-                            )
-                          }
+                          onClick={() => dice(name, stats.skillBonuses[name])}
                         >
-                          {signed(
-                            modifier(c.abilities[index]) +
-                              prof * (c.skills[name] || 0),
-                          )}
+                          {signed(stats.skillBonuses[name])}
                         </button>
                       </div>
                     ))}
                   </div>
                   <div className="passive">
                     <span>Passive Perception</span>
-                    <strong>
-                      {10 +
-                        modifier(c.abilities[4]) +
-                        prof * (c.skills.Perception || 0)}
-                    </strong>
+                    <strong>{stats.passivePerception}</strong>
                   </div>
                 </section>
                 <OverviewSpells
@@ -1392,6 +1376,10 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                 <Sword size={14} /> Manage weapons, ammunition & mastery
               </button>
             </section>
+            <StatSettings
+              character={c}
+              onChange={(patch) => setC((prev) => ({ ...prev, ...patch }))}
+            />
             <RecordList
               title="Equipment"
               type="inventory"
@@ -2095,7 +2083,7 @@ function App() {
                         </span>
                         <span>
                           <Shield size={14} />
-                          {c.ac} AC
+                          {characterStats(c).ac} AC
                         </span>
                       </div>
                       <div className="card-bottom">

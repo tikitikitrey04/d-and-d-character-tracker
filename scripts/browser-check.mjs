@@ -417,6 +417,55 @@ try {
     .getByRole("button", { name: "Create character", exact: true })
     .click();
   await page.getByRole("heading", { name: "Mira Ashfall" }).waitFor();
+  assert.equal(
+    await page.getByLabel("Armor class", { exact: true }).inputValue(),
+    "12",
+  );
+  await page.getByRole("button", { name: "Inventory", exact: true }).click();
+  const equipment = page.locator("section.panel").filter({
+    has: page.getByRole("heading", { name: "Equipment", exact: true }),
+  });
+  await equipment.getByLabel("Name", { exact: true }).fill("Half Plate +1");
+  await equipment
+    .getByRole("button", { name: "Add item", exact: true })
+    .click();
+  await page.getByLabel("Equip Half Plate +1", { exact: true }).check();
+  await page.getByLabel("Defense fighting style", { exact: false }).check();
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  assert.equal(
+    await page.getByLabel("Armor class", { exact: true }).inputValue(),
+    "19",
+  );
+  await saveCharacter(page);
+  await page.reload();
+  await page
+    .locator(".character-card")
+    .filter({ has: page.getByRole("heading", { name: "Mira Ashfall" }) })
+    .click();
+  await page.getByRole("heading", { name: "Mira Ashfall" }).waitFor();
+  assert.equal(
+    await page.getByLabel("Armor class", { exact: true }).inputValue(),
+    "19",
+  );
+  await page.getByRole("button", { name: "Inventory", exact: true }).click();
+  await page.getByLabel("Armor class mode").selectOption("manual");
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  await page.getByLabel("Armor class", { exact: true }).fill("16");
+  assert.equal(
+    await page.getByLabel("Armor class", { exact: true }).inputValue(),
+    "16",
+  );
+  await page.getByRole("button", { name: "Inventory", exact: true }).click();
+  await page.getByLabel("Armor class mode").selectOption("auto");
+  await page
+    .getByRole("button", { name: "Remove Half Plate +1", exact: true })
+    .click();
+  await page.getByLabel("Defense fighting style", { exact: false }).uncheck();
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  assert.equal(
+    await page.getByLabel("Armor class", { exact: true }).inputValue(),
+    "12",
+  );
   await page.getByLabel("Temporary HP", { exact: true }).fill("3");
   await page.getByLabel("Damage or healing amount").fill("5");
   await page.getByRole("button", { name: "− Damage", exact: true }).click();

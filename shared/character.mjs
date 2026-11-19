@@ -59,6 +59,9 @@ export function blankCharacter() {
     maxHp: 10,
     tempHp: 0,
     ac: 10,
+    acMode: "auto",
+    acAdjustment: 0,
+    statTraits: [],
     speed: 30,
     inspiration: false,
     conditions: [],
@@ -69,6 +72,7 @@ export function blankCharacter() {
     attacks: [],
     weapons: [],
     shieldEquipped: false,
+    shieldTraining: null,
     weaponLimitOverride: false,
     weaponHandLimit: 2,
     weaponMasteryLimit: 0,
@@ -196,6 +200,19 @@ export function validateCharacter(c) {
           ["class", "granted", "arcanum"].includes(i.preparationSource)) &&
         (i.preparationSource !== "arcanum" || i.level >= 6),
     )
+  )
+    return false;
+  if (
+    (c.acMode !== undefined && !["auto", "manual"].includes(c.acMode)) ||
+    (c.acAdjustment !== undefined && !int(c.acAdjustment, -20, 20)) ||
+    (c.shieldTraining != null && typeof c.shieldTraining !== "boolean") ||
+    (c.statTraits !== undefined &&
+      (!Array.isArray(c.statTraits) ||
+        c.statTraits.length > 3 ||
+        new Set(c.statTraits).size !== c.statTraits.length ||
+        !c.statTraits.every((t) =>
+          ["defense", "jackOfAllTrades", "alert"].includes(t),
+        )))
   )
     return false;
   if (!c.resources.every((i) => int(i.max, 1, 999) && int(i.used, 0, i.max)))
