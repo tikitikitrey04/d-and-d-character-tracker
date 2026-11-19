@@ -1,3 +1,4 @@
+import NumberInput from "./NumberInput.jsx";
 import React, { useEffect, useId, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -188,8 +189,7 @@ function Field({ label, children, ...props }) {
 function NumberField({ label, value, onChange, min = 0, max = 9999 }) {
   return (
     <Field label={label}>
-      <input
-        type="number"
+      <NumberInput
         value={value}
         min={min}
         max={max}
@@ -626,10 +626,9 @@ function RecordList({ title, items, onChange, type, addForm, character }) {
         </div>
       )}
       {type === "inventory" && (
-        <input
+        <NumberInput
           className="quantity"
           aria-label={`${item.name} quantity`}
-          type="number"
           min={0}
           max={9999}
           value={item.quantity}
@@ -979,9 +978,8 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                   <span style={{ width: `${(c.hp / c.maxHp) * 100}%` }} />
                 </div>
                 <div className="hp-controls">
-                  <input
+                  <NumberInput
                     aria-label="Damage or healing amount"
-                    type="number"
                     min={1}
                     max={9999}
                     value={amount}
@@ -1036,10 +1034,9 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                 <div className="stat-label">
                   <Shield size={16} /> ARMOR CLASS
                 </div>
-                <input
+                <NumberInput
                   className="big-stat"
                   aria-label="Armor class"
-                  type="number"
                   min={0}
                   max={99}
                   value={stats.ac}
@@ -1068,10 +1065,9 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                 <div className="stat-label">
                   <Compass size={16} /> SPEED
                 </div>
-                <input
+                <NumberInput
                   className="big-stat"
                   aria-label="Speed in feet"
-                  type="number"
                   min={0}
                   max={999}
                   value={c.speed}
@@ -1095,8 +1091,7 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                   >
                     {signed(modifier(c.abilities[i]))}
                   </button>
-                  <input
-                    type="number"
+                  <NumberInput
                     min={1}
                     max={30}
                     aria-label={`${name} score`}

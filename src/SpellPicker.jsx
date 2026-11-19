@@ -1,3 +1,4 @@
+import NumberInput from "./NumberInput.jsx";
 import React, { useId, useState } from "react";
 import { Plus } from "lucide-react";
 import catalog from "./data/spells-2024.json";
@@ -258,9 +259,8 @@ export default function SpellPicker({ character, items, onChange }) {
               </div>
               <div className="field">
                 <label htmlFor={`${id}-custom-level`}>Custom spell level</label>
-                <input
+                <NumberInput
                   id={`${id}-custom-level`}
-                  type="number"
                   value={customLevel}
                   min={0}
                   max={9}
