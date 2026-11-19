@@ -76,7 +76,16 @@ export function weaponSummary(c) {
   const hands =
     weapons
       .filter((w) => w.equipped && w.quantity > 0)
-      .reduce((sum, w) => sum + weaponHands(w), 0) + (c.shieldEquipped ? 1 : 0);
+      .reduce((sum, w) => sum + weaponHands(w), 0) +
+    (c.shieldEquipped ||
+    (c.inventory || []).some(
+      (i) =>
+        i.equipped &&
+        i.quantity > 0 &&
+        /^(?:\+[1-3]\s+)?shield(?:\s+\+[1-3])?$/i.test(i.name.trim()),
+    )
+      ? 1
+      : 0);
   const mastered = new Set(weapons.filter((w) => w.mastered).map(weaponKey))
     .size;
   return {

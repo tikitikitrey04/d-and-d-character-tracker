@@ -8,6 +8,7 @@ import {
   signed,
 } from "../shared/character.mjs";
 import "./print.css";
+import { characterStats } from "../shared/stats.mjs";
 import SpellAttribution from "./SpellAttribution.jsx";
 import WeaponAttribution from "./WeaponAttribution.jsx";
 import { weaponStats, weaponSummary, weaponKey } from "../shared/weapons.mjs";
@@ -58,6 +59,7 @@ function Prose({ children }) {
 export default function PrintableCharacter({ character: c }) {
   const preparation = preparationSummary(c);
   const prof = proficiency(c.level);
+  const stats = characterStats(c);
   useEffect(() => {
     let previousTitle;
     const before = () => {
@@ -116,13 +118,10 @@ export default function PrintableCharacter({ character: c }) {
         {[
           ["Hit points", `${c.hp} / ${c.maxHp}`],
           ["Temporary HP", c.tempHp],
-          ["Armor class", c.ac],
-          ["Initiative", signed(modifier(c.abilities[1]))],
+          ["Armor class", stats.ac],
+          ["Initiative", signed(stats.initiative)],
           ["Speed", `${c.speed} ft.`],
-          [
-            "Passive Perception",
-            10 + modifier(c.abilities[4]) + prof * (c.skills.Perception || 0),
-          ],
+          ["Passive Perception", stats.passivePerception],
         ].map(([k, v]) => (
           <div key={k}>
             <strong>{v}</strong>
@@ -158,9 +157,7 @@ export default function PrintableCharacter({ character: c }) {
             headings={["Ability", "Bonus", "Training"]}
             rows={abilities.map((name, i) => [
               name,
-              signed(
-                modifier(c.abilities[i]) + (c.saves.includes(i) ? prof : 0),
-              ),
+              signed(stats.saves[i]),
               c.saves.includes(i) ? "Proficient" : "—",
             ])}
           />
@@ -171,7 +168,7 @@ export default function PrintableCharacter({ character: c }) {
             rows={skills.map(([name, i]) => [
               name,
               abilities[i].slice(0, 3).toUpperCase(),
-              signed(modifier(c.abilities[i]) + prof * (c.skills[name] || 0)),
+              signed(stats.skillBonuses[name]),
               ["—", "Proficient", "Expertise"][c.skills[name] || 0],
             ])}
           />

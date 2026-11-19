@@ -11,8 +11,8 @@ const sections = [
         background, and an optional campaign.
       </>,
       <>
-        Open the character and enter your final ability scores, HP, AC, speed,
-        and proficiencies in <strong>Overview</strong>. Use the scores after
+        Open the character and enter your final ability scores, HP, speed, and
+        proficiencies in <strong>Overview</strong>. Use the scores after
         applying your character creation bonuses.
       </>,
       <>
@@ -25,7 +25,7 @@ const sections = [
         private character vault.
       </>,
     ],
-    note: "This is a manual character sheet with selected calculations. Choose your rules options and enter HP, AC, features, and other character details yourself.",
+    note: "This is a manual character sheet with selected calculations. Choose your rules options and enter HP, features, and other character details yourself. Configure automatic AC and supported traits under Inventory; existing characters retain manual AC until you change the mode.",
   },
   {
     id: "save",
