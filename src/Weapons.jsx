@@ -483,7 +483,9 @@ function WeaponEditor({ character: c, weapon: w, onChange, onRemove }) {
         )}
       </div>
       <details>
-        <summary>Edit weapon, bonuses & resources</summary>
+        <summary aria-label={`Edit ${w.name}`}>
+          Edit weapon, bonuses & resources
+        </summary>
         <div className="weapon-edit">
           <WeaponDefinition weapon={w} onChange={onChange} />
           <div className="form-grid">

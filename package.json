@@ -16,7 +16,8 @@
     "test:browser": "npm run build && node scripts/browser-check.mjs",
     "format": "prettier --write src server shared scripts tests package.json vite.config.js index.html README.md",
     "test:autosave-browser": "npm run build && node scripts/autosave-browser-check.mjs",
-    "test:numeric-input-browser": "npm run build && node scripts/numeric-input-browser-check.mjs"
+    "test:numeric-input-browser": "npm run build && node scripts/numeric-input-browser-check.mjs",
+    "test:edit-records-browser": "npm run build && node scripts/edit-records-browser-check.mjs"
   },
   "dependencies": {
     "express": "^5.1.0",
