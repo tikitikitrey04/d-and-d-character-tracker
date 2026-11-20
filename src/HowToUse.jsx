@@ -7,13 +7,31 @@ const sections = [
     steps: [
       <>
         From <strong>My characters</strong>, choose{" "}
-        <strong>Create character</strong>. Enter a name, class, level, species,
-        background, and an optional campaign.
+        <strong>Create character</strong>. Choose New character or Existing
+        character, then enter a name, class, level, species, background, and an
+        optional campaign. The background picker lists the 16 options from the
+        2024 Player’s Handbook, with ability options, origin feat, skills, and
+        tool proficiency. Use Custom / other source for homebrew or older
+        backgrounds.
       </>,
       <>
-        Open the character and enter your final ability scores, HP, AC, speed,
-        and proficiencies in <strong>Overview</strong>. Use the scores after
-        applying your character creation bonuses.
+        Starting equipment is enabled by default for a New character; uncheck
+        <strong> Include starting equipment and gold</strong> to opt out.
+        Existing characters default to no starting kit. Choose class and
+        background packages or gold alternatives, review any tool choices, and
+        check the preview before creating the character. Core 2024 species grant
+        traits rather than separate equipment kits.
+      </>,
+      <>
+        For a new character, select species and background to open 27-point buy.
+        Open Point-buy help for the costs and rules. Background increases are
+        included in the final scores. Choose Manual final scores for rolled
+        scores or an existing character.
+      </>,
+      <>
+        Open the character to review ability scores and enter HP, speed, and
+        proficiencies in <strong>Overview</strong>. Point-buy scores already
+        include background increases; manual scores should include all bonuses.
       </>,
       <>
         Add class features in <strong>Features</strong>, limited-use resources
@@ -21,11 +39,11 @@ const sections = [
         and <strong>Weapons</strong>, and spells in <strong>Spells</strong>.
       </>,
       <>
-        Click <strong>Save character</strong>. Your account keeps its own
+        Edits save automatically after a short pause. Your account keeps its own
         private character vault.
       </>,
     ],
-    note: "This is a manual character sheet with selected calculations. Choose your rules options and enter HP, AC, features, and other character details yourself.",
+    note: "This is a manual character sheet with selected calculations. Choose your rules options and enter HP, features, and other character details yourself. Configure automatic AC and supported traits under Inventory; existing characters retain manual AC until you change the mode.",
   },
   {
     id: "save",
@@ -36,17 +54,20 @@ const sections = [
         Heroic Inspiration, death saves, abilities, skills, and saving throws.
       </>,
       <>
-        Use <strong>Inventory</strong> for general gear and currency,{" "}
+        Use <strong>Inventory</strong> to search the 2024 equipment catalog, add
+        custom gear, and track currency. Catalog weapons go to the armory;
+        equipped armor and shields update automatic AC. Use{" "}
         <strong>Features</strong> for class features and traits, and{" "}
         <strong>Journal</strong> for adventure notes.
       </>,
       <>
-        Click <strong>Save character</strong> after editing your sheet, casting
-        a spell, attacking, or changing resource counts. These changes are not
-        saved automatically.
+        Sheet edits, spell casting, attacks, and resource changes save
+        automatically about one second after your last edit. Watch for{" "}
+        <strong>All changes saved</strong>. Use <strong>Save character</strong>{" "}
+        to save immediately or retry a failed save.
       </>,
     ],
-    note: "Save before refreshing, changing pages, or signing out. The PDF can include unsaved edits, but exporting does not save them to your account.",
+    note: "Wait for All changes saved before refreshing, changing pages, or signing out. If saving fails, your edits stay on the open sheet; retry with Save character. Export includes current edits but does not save them to your account.",
   },
   {
     id: "archive",
@@ -292,8 +313,9 @@ export default function HowToUse({ onBack, isAdmin }) {
         </button>
       </header>
       <aside className="guide-save-note">
-        <strong>Remember to save.</strong> Character edits and resource use stay
-        in this browser until you click <strong>Save character</strong>.
+        <strong>Autosave is on.</strong> Wait for{" "}
+        <strong>All changes saved</strong> before leaving your sheet. Use{" "}
+        <strong>Save character</strong> to save now or retry.
       </aside>
       <nav className="guide-topics" aria-label="Guide topics">
         {sections.map(({ id, title }) => (

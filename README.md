@@ -161,7 +161,7 @@ Reports persist in SQLite alongside accounts and characters; the database table 
 - Responsive desktop and mobile layouts.
 - Light/dark themes with a persistent browser preference and system-theme default. PDF exports remain light and printer-friendly.
 
-Character records live in `data/keeper.sqlite` (created automatically, excluded from Git). Back up this directory with the server stopped. Character edits stay in the browser until **Save character** is pressed. Export includes the current unsaved values.
+Character records live in `data/keeper.sqlite` (created automatically, excluded from Git). Back up this directory with the server stopped. Character edits save automatically about one second after the last change. Wait for **All changes saved** before leaving, refreshing, or signing out; **Save character** saves immediately or retries a failed save. Failed saves keep edits on the open sheet and show an error. Requests run one at a time, including when you edit during a save; the latest changes are saved next. Export includes the current unsaved values.
 
 Use the **Dark theme / Light theme** button on the sign-in screen or near the bottom of the sidebar to switch appearance. On mobile it is a sun/moon icon in the top bar. The preference is stored in this browser, independently of the player account. Until a theme is selected, the app follows system appearance; it also responds to system changes and synchronizes explicit selections across tabs. If browser storage is unavailable, switching still works for the current page.
 
@@ -191,7 +191,7 @@ Below Skills & saving throws, each ready spell appears **once under its base lev
 
 Overview and Spells update together immediately. Buttons for depleted slot levels remain visible but disabled; casting never falls back to another level. Ready spells without a matching slot pool remain listed under their base level with casting disabled. Always-prepared feature spells use slots normally; feature-specific free casts, ritual casting, and other exceptional casting methods remain manual.
 
-Warlocks use their Pact Magic pool for ordinary spells. An unlocked Mystic Arcanum spell instead expends its independent once-per-Long-Rest use without changing slots. **Restore after Long Rest** resets that spell’s use after the player has taken the rest. Spell descriptions and PDF status reflect the same character data; casting does not roll attacks/damage or automatically apply effects. Use **Save character** to persist slot expenditure and Arcanum usage, like other sheet edits.
+Warlocks use their Pact Magic pool for ordinary spells. An unlocked Mystic Arcanum spell instead expends its independent once-per-Long-Rest use without changing slots. **Restore after Long Rest** resets that spell’s use after the player has taken the rest. Spell descriptions and PDF status reflect the same character data; casting does not roll attacks/damage or automatically apply effects. Slot expenditure and Arcanum usage autosave, like other sheet edits. Use **Save character** to save immediately.
 
 ### Weapons, mastery, and attacks
 
@@ -205,7 +205,7 @@ Each equipped entry represents one held copy even when its quantity includes spa
 
 Ranged Ammunition attacks expend one tracked ammunition unit; throwing expends one owned copy. These resources are spent even on a miss. Optional limited weapon uses expend one use per attack. Buttons disable when stock, ammunition, uses, or hands are unavailable. Restock/recover ammunition and thrown weapons, or restore limited uses, in the weapon editor. **Save character** persists all changes, and PDF exports include weapon stats, equipment/mastery status, ammunition, and uses. General Inventory remains separate: existing manually entered weapons and attacks are preserved without automatic conversion or duplication.
 
-The app does not automate attack/action counts, range/target conditions, off-hand extra-attack damage, armor/shield eligibility, Monk Martial Arts, Rage, fighting styles, mastery effects, or every feat/subclass exception. Set the appropriate ability/damage/proficiency/hand overrides and resolve these rules at the table. Property descriptions and weapon notes remain editable. Data sources and attribution appear in the app/PDF and in [WEAPON_DATA_LICENSE.md](WEAPON_DATA_LICENSE.md). No external API is called while using weapons.
+The app does not automate attack/action counts, range/target conditions, off-hand extra-attack damage, armor eligibility penalties, Monk Martial Arts, Rage, fighting styles other than Defense, mastery effects, or every feat/subclass exception. Set the appropriate ability/damage/proficiency/hand overrides and resolve these rules at the table. Property descriptions and weapon notes remain editable. Data sources and attribution appear in the app/PDF and in [WEAPON_DATA_LICENSE.md](WEAPON_DATA_LICENSE.md). No external API is called while using weapons.
 
 For sheets saved before automatic slots existed, empty or already-standard maximums adopt automatic mode. Existing custom maximums are preserved in manual mode; turn off **Manual override** to adopt class defaults. No stored custom values are overwritten by merely opening a sheet.
 
@@ -229,7 +229,7 @@ Use **Custom / other source** for homebrew, older books, or other supplements. E
 
 ## Rules scope
 
-This is a **manual character builder and play tracker with an SRD spell picker and automatic spell slots**, not a complete rules engine. Use the [official 2024 free rules](https://www.dndbeyond.com/sources/dnd/br-2024/creating-a-character) to choose legal options. Enter final ability scores including background bonuses, HP, armor class, class features, and equipment yourself. Changing class or level updates proficiency, the spell picker, and automatic slot maximums, but does not automatically grant features, change HP, or remove previously added spells. Apply condition effects, exhaustion, multiclass rules, spellcasting modifiers, rest recovery, and situational bonuses manually. Resources and spell slots can be restored individually. Paid-book spells outside the SRD are not included.
+This is a **manual character builder and play tracker with an SRD spell picker and automatic spell slots**, not a complete rules engine. Use the [official 2024 free rules](https://www.dndbeyond.com/sources/dnd/br-2024/creating-a-character) to choose legal options. Enter final ability scores including background bonuses, HP, class features, and equipment yourself. New characters calculate AC automatically; existing characters keep their manual AC until you select automatic mode under Inventory. Changing class or level updates proficiency, the spell picker, and automatic slot maximums, but does not automatically grant features, change HP, or remove previously added spells. Apply condition effects, exhaustion, multiclass rules, spellcasting modifiers, rest recovery, and situational bonuses manually. Resources and spell slots can be restored individually. Paid-book spells outside the SRD are not included.
 
 There is no campaign sharing, DM dashboard, email verification, password recovery, yet. Accounts are separate players, not a shared party. The app uses Google Fonts with local system-font fallbacks.
 
@@ -241,8 +241,50 @@ npm run build
 npm start
 ```
 
+Run `npm run test:autosave-browser` for focused autosave checks, including edits during a slow save and recovery from a failed request. Both browser checks use installed Google Chrome by default; set `PLAYWRIGHT_BROWSER_CHANNEL=chromium` to use a Playwright-installed Chromium instead.
+
 Run `npm run test:browser` to test the full player flow in an installed Google Chrome. It uses an isolated in-memory database and writes desktop/mobile screenshots to the ignored `artifacts/` directory.
 
 The production server serves the built app and API together at **http://127.0.0.1:3001**. `PORT` and `HOST` configure the listener. Outside Docker, the default listener is local to this computer. `NODE_ENV=production` defaults to Secure session cookies; `SECURE_COOKIES=true` or `false` explicitly sets that flag. Compose provides the LAN HTTP configuration described above. Keep the service same-origin; Internet deployments require HTTPS and appropriate trusted reverse-proxy/rate-limiting configuration. Running multiple server instances requires shared session/data storage and a shared rate limiter.
 
 The integration tests cover registration, login, sessions/logout, character CRUD, validation, cross-account isolation, mutation protection, cookie configuration, health checks, and LAN-compatible IDs. The browser checks run through a mapped non-localhost HTTP hostname, verifying the full player flow when `crypto.randomUUID()` is unavailable. The SQLite API in Node.js 24 may emit an experimental-feature warning.
+
+### Automatic stats and armor
+
+Under **Inventory → Automatic stats & armor**, choose automatic or manual AC. Equip standard armor by name in Equipment (for example `Leather`, `Half Plate +1`, or `Plate Armor`). Light armor adds Dexterity, medium armor caps its Dexterity contribution at +2, and heavy armor ignores Dexterity. Equipped armor and shields must have positive quantity. Magic armor/shield names support +1 through +3. Multiple armor items trigger a warning and use only the highest single armor AC; shields never stack. The Weapons shield toggle and equipped inventory shields count as one shield for AC and hand usage.
+
+Shield training follows your base class, with an override for feature grants. Unarmored Barbarians use Dexterity + Constitution; unarmored Monks use Dexterity + Wisdom when no shield is equipped. Select Defense, Jack of All Trades, and 2024 Alert when your character has those features. An AC adjustment supports other magic items, temporary effects, and custom traits. Feature notes and arbitrary equipment descriptions are not parsed. Skill proficiency, expertise, saving throws, initiative, passive Perception, character cards, and printed sheets use the current calculated values. Rules references: [equipment](https://www.dndbeyond.com/sources/dnd/br-2024/equipment) and [class features](https://www.dndbeyond.com/sources/dnd/br-2024/character-classes).
+
+### 2024 backgrounds
+
+The character builder and **Features** tab offer all 16 backgrounds from the 2024 Player’s Handbook, with ability score options, origin feat, skill proficiencies, tool proficiency, and a link to the equipment/rules reference. **Custom / other source** preserves homebrew and older backgrounds. Selection records the background name; apply the listed ability increases, proficiencies, feat effects, and starting equipment/gold using the sheet’s existing controls. Changing backgrounds does not add or remove those benefits automatically.
+
+Background names and mechanical metadata were checked against [Wizards’ background overview](https://www.dndbeyond.com/posts/1785-the-backgrounds-and-origin-feats-in-the-2024), the [2024 free rules](https://www.dndbeyond.com/sources/dnd/br-2024/character-origins), and the [licensed Player’s Handbook compendium](https://roll20.net/compendium/dnd5e/Rules:Background%20Descriptions?expansion=32231). Narrative descriptions and feat rules text are not bundled.
+
+### 2024 equipment catalog
+
+**Inventory → Equipment → 2024 equipment catalog** includes 229 choices: all 38 standard weapons, 13 armor/shield entries, tools and their instrument/gaming-set variants, adventuring gear, seven equipment packs, ammunition bundles, spellcasting focuses, mounts and animals, tack, land/air/water vehicles, barding, and food/drink. Search or filter by category, choose a quantity, and optionally equip the item. Weight, price, and rules details are copied onto the owned entry. **Custom item** supports homebrew gear.
+
+Weapons added here go to **Weapons** with full attack statistics and resource controls. Equipped armor and shields affect automatic AC; shields also occupy a weapon hand. Barding belongs to the mount and does not affect rider AC. Ammunition is sold by the bundle shown in its name; update the weapon’s ammunition count separately when loading it. Equipment packs stay as one entry with their contents listed in the description.
+
+Adding gear does not spend gold. Item actions, consumption, tool checks, mount/vehicle statistics, carrying weight, and temporary effects are resolved manually. Service prices are available as a reference below the picker. This covers the standard [2024 equipment chapter](https://www.dndbeyond.com/sources/dnd/br-2024/equipment), including its Potion of Healing and cantrip/level-1 Spell Scroll entries; the separate DMG magic-item collection and setting-specific gear are not bundled. Data source, license, changes, and refresh instructions are in [EQUIPMENT_DATA_LICENSE.md](EQUIPMENT_DATA_LICENSE.md).
+
+### Optional starting kits
+
+In **Create character**, choose **New character** to default **Include starting equipment and gold** on (you can uncheck it), or choose **Existing character** to default it off. Enable the equipment option to choose the published 2024 class and background packages or their gold alternatives. All 12 classes and 16 backgrounds are supported, including Fighter’s two equipment packages. Select any required instrument, artisan’s tools, gaming set, or holy-symbol form before creating the character. The preview follows the current class and background; changing either replaces that part of the selection, and nothing is added until creation. Custom/older backgrounds have no preset package and can be equipped manually.
+
+Class and background gold are added together. Weapons go into the armory, with bow/crossbow ammunition in their counters; ammunition is not duplicated as inventory bundles. Packs remain bundled. Duplicate matching grants combine quantities, while books with different subjects and spellcasting-focus staves remain distinct. Included armor and shields may start equipped; weapons start stored. Wizard equipment packages include a class spellbook, and focus Quarterstaffs are added as weapons with a focus note. Turning the option off retains the manual, empty-equipment start.
+
+Under the [2024 creation rules](https://www.dndbeyond.com/sources/dnd/br-2024/creating-a-character), class and background provide equipment; core species/races provide traits rather than separate kits. Species-specific homebrew gear can be added manually. These are the normal level 1 kits; additional higher-level starting wealth and magic items are determined with the DM. Kits add gear and gold only; abilities, proficiencies, feats, HP, and spells still use the sheet’s existing controls.
+
+### New characters, existing characters, and point buy
+
+The builder first asks whether this is a **New character** or an **Existing character**. New characters default to point buy and starting equipment on; existing characters default to manual final scores and starting equipment off. Both defaults can be changed before creation.
+
+After class, species, and background are selected, **Point buy** provides the 2024 27-point budget with base scores from 1 through 15 (starting at 8), nonlinear costs for 14 and 15, remaining points, background increases, final scores, and modifiers. Overspending and duplicate/ineligible background increases are prevented. You may leave points unspent. **Reset to 8** clears purchases; **Use standard array** assigns a valid 27-point distribution. Choose +2/+1 or three +1 background increases. Changing backgrounds recalculates increases from the same base scores; bonuses never accumulate. Custom or older backgrounds can select any abilities with DM guidance.
+
+Open **Point-buy help** for the cost table and rules explanation. In the 2024 rules, ability increases come from backgrounds rather than species/race. **Manual final scores** supports existing, rolled, or house-rule characters and does not add background bonuses. Only final scores are saved; creation choices do not modify existing sheets.
+
+The character builder uses three pages: **1. Character details** (new/existing, name, class, species, background, subclass, level, campaign), **2. Starting equipment**, and **3. Point buy & ability scores**. Back and Next preserve draft choices. Only page 3 creates the character; existing characters can enter manual final scores there.
+
+Point buy includes a house-rule extension: each base-score step below 8 refunds one point, down to a minimum score of 1. For example, a score of 6 adds 2 points to the normal 27-point allowance. The budget display separates refunds from purchase spending; raising reduced scores spends their refunds back. Base scores still cap at 15. Standard 2024 point buy itself has a minimum of 8; the help panel identifies this extension.

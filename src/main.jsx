@@ -1,3 +1,7 @@
+import PointBuy from "./PointBuy.jsx";
+import { pointBuyResult } from "../shared/point-buy.mjs";
+import BackgroundPicker from "./BackgroundPicker.jsx";
+import NumberInput from "./NumberInput.jsx";
 import React, { useEffect, useId, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -36,6 +40,8 @@ import {
   signed,
   proficiency,
 } from "../shared/character.mjs";
+import { characterStats } from "../shared/stats.mjs";
+import StatSettings from "./StatSettings.jsx";
 import "./styles.css";
 import PrintableCharacter from "./PrintableCharacter.jsx";
 import AdminLogs from "./AdminLogs.jsx";
@@ -44,6 +50,7 @@ import AccountSettings from "./AccountSettings.jsx";
 import HowToUse from "./HowToUse.jsx";
 import CharacterArchive from "./CharacterArchive.jsx";
 import SubclassPicker from "./SubclassPicker.jsx";
+import useAutosave from "./useAutosave.jsx";
 import SpellSlots from "./SpellSlots.jsx";
 import OverviewSpells from "./OverviewSpells.jsx";
 import ThemeToggle, { ThemeProvider } from "./Theme.jsx";
@@ -82,6 +89,10 @@ function downloadCharacter(character) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+const StartingEquipmentPicker = React.lazy(
+  () => import("./StartingEquipmentPicker.jsx"),
+);
+const EquipmentPicker = React.lazy(() => import("./EquipmentPicker.jsx"));
 const SpellPicker = React.lazy(() => import("./SpellPicker.jsx"));
 
 async function api(path, options = {}) {
@@ -185,8 +196,7 @@ function Field({ label, children, ...props }) {
 function NumberField({ label, value, onChange, min = 0, max = 9999 }) {
   return (
     <Field label={label}>
-      <input
-        type="number"
+      <NumberInput
         value={value}
         min={min}
         max={max}
@@ -398,13 +408,77 @@ function Creator({ onClose, onCreate }) {
   }, [onClose]);
   const [draft, setDraft] = useState(blankCharacter),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
-  const set = (k, v) => setDraft((c) => ({ ...c, [k]: v }));
+    [error, setError] = useState(""),
+    [characterType, setCharacterType] = useState(null),
+    [abilityMethod, setAbilityMethod] = useState("manual"),
+    [baseScores, setBaseScores] = useState(Array(6).fill(8)),
+    [boostMode, setBoostMode] = useState("split"),
+    [boostChoices, setBoostChoices] = useState([]),
+    [includeStartingKit, setIncludeStartingKit] = useState(false),
+    [kitSelection, setKitSelection] = useState({}),
+    [page, setPage] = useState(1);
+  const pageHeading = useRef(null);
+  useEffect(() => {
+    pageHeading.current?.focus();
+    if (modalRef.current) modalRef.current.scrollTop = 0;
+  }, [page]);
+  const set = (k, v) => {
+    setDraft((c) => ({ ...c, [k]: v }));
+    if (k === "background") setBoostChoices([]);
+    if (k === "class" || k === "background") {
+      const prefix = k === "class" ? "class-" : "background-";
+      setKitSelection((previous) => ({
+        ...previous,
+        [k === "class" ? "classOption" : "backgroundOption"]: undefined,
+        choices: Object.fromEntries(
+          Object.entries(previous.choices || {}).filter(
+            ([key]) => !key.startsWith(prefix),
+          ),
+        ),
+      }));
+    }
+  };
   async function submit(e) {
     e.preventDefault();
+    if (page < 3) {
+      if (
+        page === 1 &&
+        (!draft.name.trim() ||
+          !draft.species.trim() ||
+          (abilityMethod === "point-buy" && !draft.background.trim()))
+      ) {
+        setError(
+          "Enter a character name, species, and background before continuing. Existing characters using manual scores may leave background blank.",
+        );
+        return;
+      }
+      setError("");
+      setPage(page + 1);
+      return;
+    }
     setBusy(true);
     try {
-      await onCreate(draft);
+      if (!characterType)
+        throw new Error("Choose whether this is a new or existing character.");
+      const creationDraft = { ...draft };
+      if (abilityMethod === "point-buy") {
+        if (!draft.species.trim() || !draft.background.trim())
+          throw new Error(
+            "Choose a species and background before using point buy.",
+          );
+        creationDraft.abilities = pointBuyResult(
+          baseScores,
+          draft.background,
+          boostMode,
+          boostChoices,
+        ).final;
+      }
+      const character = includeStartingKit
+        ? (
+            await import("../shared/starting-equipment.mjs")
+          ).applyStartingEquipment(creationDraft, kitSelection)
+        : creationDraft;
+      await onCreate(character);
     } catch (e) {
       setError(e.message);
       setBusy(false);
@@ -435,77 +509,240 @@ function Creator({ onClose, onCreate }) {
         <p className="muted">
           Start with the essentials. You can fill in every detail on your sheet.
         </p>
-        <form onSubmit={submit}>
-          <Field
-            label="Character name"
-            value={draft.name}
-            onChange={(e) => set("name", e.target.value)}
-            placeholder="A name worth remembering"
-            required
-            maxLength={80}
-            autoFocus
-          />
-          <div className="form-grid">
-            <Field label="Class">
-              <select
-                value={draft.class}
-                onChange={(e) => set("class", e.target.value)}
+        <ol className="creator-steps" aria-label="Character creation progress">
+          {["Character details", "Starting equipment", "Ability scores"].map(
+            (label, index) => (
+              <li
+                key={label}
+                aria-current={page === index + 1 ? "step" : undefined}
               >
-                {classes.map((v) => (
-                  <option key={v}>{v}</option>
-                ))}
-              </select>
-            </Field>
-            <NumberField
-              label="Level"
-              value={draft.level}
-              onChange={(v) => set("level", v)}
-              min={1}
-              max={20}
-            />
-            <Field
-              label="Species"
-              value={draft.species}
-              onChange={(e) => set("species", e.target.value)}
-              maxLength={200}
-            />
-            <Field
-              label="Background"
-              value={draft.background}
-              onChange={(e) => set("background", e.target.value)}
-              placeholder="e.g. Soldier, Sage"
-              maxLength={200}
-            />
-          </div>
-          <SubclassPicker
-            character={draft}
-            onChange={(value) => set("subclass", value)}
-          />
-          <Field
-            label="Campaign (optional)"
-            value={draft.campaign}
-            onChange={(e) => set("campaign", e.target.value)}
-            placeholder="Where will your story unfold?"
-            maxLength={200}
-          />
-          <div className="builder-note">
-            <BookOpen size={18} />
-            <p>
-              This is a manual 2024 sheet. Add your background’s bonuses to your
-              final ability scores, and enter your class features, HP, and
-              equipment after creation.
-            </p>
-          </div>
-          {error && (
-            <p className="error" role="alert">
-              {error}
-            </p>
+                {index + 1}. {label}
+              </li>
+            ),
           )}
-          <button className="primary wide" disabled={busy}>
-            {busy ? "Creating…" : "Create character"}
-            <Plus size={17} />
-          </button>
-        </form>
+        </ol>
+        <h3 ref={pageHeading} tabIndex={-1}>
+          Page {page} of 3:{" "}
+          {
+            [
+              "Character details",
+              "Starting equipment",
+              "Point buy & ability scores",
+            ][page - 1]
+          }
+        </h3>
+        {page === 1 && (
+          <fieldset className="character-type-choice">
+            <legend>Is this a new character?</legend>
+            {[
+              ["new", "New character"],
+              ["existing", "Existing character"],
+            ].map(([type, label]) => (
+              <label key={type}>
+                <input
+                  type="radio"
+                  name="character-type"
+                  value={type}
+                  checked={characterType === type}
+                  onChange={() => {
+                    setCharacterType(type);
+                    setIncludeStartingKit(type === "new");
+                    setAbilityMethod(type === "new" ? "point-buy" : "manual");
+                    setError("");
+                  }}
+                />{" "}
+                {label}
+              </label>
+            ))}
+            <p className="helper">
+              New characters start with point buy and starting equipment
+              enabled. Existing characters use manual scores and optional
+              equipment.
+            </p>
+          </fieldset>
+        )}
+        {characterType && (
+          <form onSubmit={submit}>
+            {page === 1 && (
+              <>
+                <Field
+                  label="Character name"
+                  value={draft.name}
+                  onChange={(e) => set("name", e.target.value)}
+                  placeholder="A name worth remembering"
+                  required
+                  maxLength={80}
+                  autoFocus
+                />
+                <div className="form-grid">
+                  <Field label="Class">
+                    <select
+                      value={draft.class}
+                      onChange={(e) => set("class", e.target.value)}
+                    >
+                      {classes.map((v) => (
+                        <option key={v}>{v}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <NumberField
+                    label="Level"
+                    value={draft.level}
+                    onChange={(v) => set("level", v)}
+                    min={1}
+                    max={20}
+                  />
+                  <Field
+                    label="Species"
+                    value={draft.species}
+                    onChange={(e) => set("species", e.target.value)}
+                    maxLength={200}
+                  />
+                  <BackgroundPicker
+                    value={draft.background}
+                    abilityScoresManaged={abilityMethod === "point-buy"}
+                    onChange={(value) => set("background", value)}
+                  />
+                </div>
+                <SubclassPicker
+                  character={draft}
+                  onChange={(value) => set("subclass", value)}
+                />
+                <Field
+                  label="Campaign (optional)"
+                  value={draft.campaign}
+                  onChange={(e) => set("campaign", e.target.value)}
+                  placeholder="Where will your story unfold?"
+                  maxLength={200}
+                />
+              </>
+            )}
+            {page === 2 && (
+              <>
+                <fieldset className="starting-equipment-section">
+                  <legend>Starting equipment</legend>
+                  <label className="slot-override">
+                    <input
+                      type="checkbox"
+                      checked={includeStartingKit}
+                      onChange={(e) => setIncludeStartingKit(e.target.checked)}
+                    />
+                    Include starting equipment and gold
+                  </label>
+                  {includeStartingKit && (
+                    <React.Suspense
+                      fallback={
+                        <p className="helper">Loading starting kits…</p>
+                      }
+                    >
+                      <StartingEquipmentPicker
+                        character={draft}
+                        selection={kitSelection}
+                        onChange={setKitSelection}
+                      />
+                    </React.Suspense>
+                  )}
+                </fieldset>
+              </>
+            )}
+            {page === 3 && (
+              <>
+                <fieldset className="creation-abilities">
+                  <legend>Ability scores</legend>
+                  <Field label="Ability score method">
+                    <select
+                      value={abilityMethod}
+                      onChange={(e) => setAbilityMethod(e.target.value)}
+                    >
+                      <option value="point-buy">
+                        Point buy (2024 · 27 points)
+                      </option>
+                      <option value="manual">Manual final scores</option>
+                    </select>
+                  </Field>
+                  {abilityMethod === "point-buy" ? (
+                    draft.class &&
+                    draft.species.trim() &&
+                    draft.background.trim() ? (
+                      <PointBuy
+                        character={draft}
+                        scores={baseScores}
+                        onScores={setBaseScores}
+                        boostMode={boostMode}
+                        onBoostMode={setBoostMode}
+                        boostChoices={boostChoices}
+                        onBoostChoices={setBoostChoices}
+                      />
+                    ) : (
+                      <p className="helper" role="status">
+                        Select your class, species, and background on page 1 to
+                        open point buy.
+                      </p>
+                    )
+                  ) : (
+                    <>
+                      <p className="helper">
+                        Enter final scores, including background increases and
+                        any other bonuses.
+                      </p>
+                      <div className="form-grid">
+                        {abilities.map((name, i) => (
+                          <NumberField
+                            key={name}
+                            label={`${name} final score`}
+                            value={draft.abilities[i]}
+                            min={1}
+                            max={30}
+                            onChange={(value) =>
+                              set(
+                                "abilities",
+                                draft.abilities.map((n, j) =>
+                                  i === j ? value : n,
+                                ),
+                              )
+                            }
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </fieldset>
+                <div className="builder-note">
+                  <BookOpen size={18} />
+                  <p>
+                    Point buy includes the selected background’s ability
+                    increases. Manual scores should already include bonuses.
+                    Enter class features and HP on the sheet, and review your
+                    starting equipment on page 2.
+                  </p>
+                </div>
+              </>
+            )}
+            {error && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
+            <div className="creator-navigation">
+              {page > 1 && (
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={busy}
+                  onClick={() => {
+                    setError("");
+                    setPage(page - 1);
+                  }}
+                >
+                  Back
+                </button>
+              )}
+              <button type="submit" className="primary" disabled={busy}>
+                {page < 3 ? "Next" : busy ? "Creating…" : "Create character"}
+              </button>
+            </div>
+          </form>
+        )}
       </section>
     </div>
   );
@@ -554,97 +791,108 @@ function RecordList({ title, items, onChange, type, addForm, character }) {
   const update = (id, patch) =>
     onChange(items.map((i) => (i.id === id ? { ...i, ...patch } : i)));
   const renderRecord = (item) => (
-    <div className="record" key={item.id}>
-      <div className="record-main">
-        {type === "spells" && character && (
-          <SpellStatus
-            character={character}
-            spell={item}
-            onChange={(patch) => update(item.id, patch)}
-          />
-        )}
-        {type === "inventory" && (
-          <input
-            type="checkbox"
-            aria-label={`${type === "spells" ? "Prepare" : "Equip"} ${item.name}`}
-            checked={type === "spells" ? item.prepared : item.equipped}
-            onChange={(e) =>
-              update(item.id, {
-                [type === "spells" ? "prepared" : "equipped"]: e.target.checked,
-              })
-            }
-          />
-        )}
-        <div>
-          <strong>{item.name}</strong>
+    <div className="record-entry" key={item.id}>
+      <div className="record">
+        <div className="record-main">
           {type === "spells" && character && (
-            <SpellSource
+            <SpellStatus
               character={character}
               spell={item}
               onChange={(patch) => update(item.id, patch)}
             />
           )}
-          <p>
-            {type === "spells"
-              ? item.level === 0
-                ? "Cantrip"
-                : `Level ${item.level}`
-              : type === "inventory"
-                ? `Quantity ${item.quantity}`
-                : ""}
-            {item.detail &&
-              `${["spells", "inventory"].includes(type) ? " · " : ""}${item.detail}`}
-          </p>
+          {type === "inventory" && (
+            <input
+              type="checkbox"
+              aria-label={`${type === "spells" ? "Prepare" : "Equip"} ${item.name}`}
+              checked={type === "spells" ? item.prepared : item.equipped}
+              onChange={(e) =>
+                update(item.id, {
+                  [type === "spells" ? "prepared" : "equipped"]:
+                    e.target.checked,
+                })
+              }
+            />
+          )}
+          <div>
+            <strong>{item.name}</strong>
+            {type === "spells" && character && (
+              <SpellSource
+                character={character}
+                spell={item}
+                onChange={(patch) => update(item.id, patch)}
+              />
+            )}
+            <p>
+              {type === "spells"
+                ? item.level === 0
+                  ? "Cantrip"
+                  : `Level ${item.level}`
+                : type === "inventory"
+                  ? `Quantity ${item.quantity}`
+                  : ""}
+              {item.detail &&
+                `${["spells", "inventory"].includes(type) ? " · " : ""}${item.detail}`}
+            </p>
+          </div>
         </div>
+        {type === "resources" && (
+          <div className="stepper">
+            <button
+              type="button"
+              aria-label={`Restore ${item.name}`}
+              onClick={() =>
+                update(item.id, { used: Math.max(0, item.used - 1) })
+              }
+            >
+              <Plus size={13} />
+            </button>
+            <span>
+              {item.max - item.used} / {item.max}
+            </span>
+            <button
+              type="button"
+              aria-label={`Use ${item.name}`}
+              onClick={() =>
+                update(item.id, { used: Math.min(item.max, item.used + 1) })
+              }
+            >
+              <Minus size={13} />
+            </button>
+          </div>
+        )}
+        {type === "inventory" && (
+          <NumberInput
+            className="quantity"
+            aria-label={`${item.name} quantity`}
+            min={0}
+            max={9999}
+            value={item.quantity}
+            onChange={(e) =>
+              update(item.id, {
+                quantity: Math.max(0, Math.min(9999, Number(e.target.value))),
+              })
+            }
+          />
+        )}
+        <button
+          type="button"
+          className="icon-button danger"
+          aria-label={`Remove ${item.name}`}
+          onClick={() => onChange(items.filter((i) => i.id !== item.id))}
+        >
+          <Trash2 size={15} />
+        </button>
       </div>
-      {type === "resources" && (
-        <div className="stepper">
-          <button
-            type="button"
-            aria-label={`Restore ${item.name}`}
-            onClick={() =>
-              update(item.id, { used: Math.max(0, item.used - 1) })
-            }
-          >
-            <Plus size={13} />
-          </button>
-          <span>
-            {item.max - item.used} / {item.max}
-          </span>
-          <button
-            type="button"
-            aria-label={`Use ${item.name}`}
-            onClick={() =>
-              update(item.id, { used: Math.min(item.max, item.used + 1) })
-            }
-          >
-            <Minus size={13} />
-          </button>
-        </div>
-      )}
-      {type === "inventory" && (
-        <input
-          className="quantity"
-          aria-label={`${item.name} quantity`}
-          type="number"
-          min={0}
-          max={9999}
-          value={item.quantity}
-          onChange={(e) =>
-            update(item.id, {
-              quantity: Math.max(0, Math.min(9999, Number(e.target.value))),
-            })
-          }
+      {["inventory", "spells"].includes(type) && (
+        <RecordEditor
+          item={item}
+          type={type}
+          items={items}
+          character={character}
+          onSave={(next) => update(item.id, next)}
         />
       )}
-      <button
-        type="button"
-        className="icon-button danger"
-        aria-label={`Remove ${item.name}`}
-        onClick={() => onChange(items.filter((i) => i.id !== item.id))}
-      >
-        <Trash2 size={15} />
-      </button>
     </div>
   );
   return (
@@ -767,13 +1015,25 @@ function RecordList({ title, items, onChange, type, addForm, character }) {
 function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
   const [c, setC] = useState(() => normalizeCharacterSlots(character)),
     [tab, setTab] = useState("Overview"),
-    [busy, setBusy] = useState(false),
+    [actionBusy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [saved, setSaved] = useState(() => normalizeCharacterSlots(character)),
     [roll, setRoll] = useState(""),
     [castMessage, setCastMessage] = useState(""),
     [weaponMessage, setWeaponMessage] = useState(""),
     [amount, setAmount] = useState(1);
+  const autosave = useAutosave(
+    c,
+    onSave,
+    (result, snapshot) => {
+      setC((current) =>
+        JSON.stringify(current) === JSON.stringify(snapshot) ? result : current,
+      );
+      setSaved(result);
+    },
+    actionBusy,
+  );
+  const busy = actionBusy || autosave.phase === "saving";
   const dirty = JSON.stringify(c) !== JSON.stringify(saved);
   useEffect(() => {
     const handler = (e) => {
@@ -788,6 +1048,7 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
   const set = (k, v) =>
     setC((prev) => normalizeCharacterSlots({ ...prev, [k]: v }));
   const prof = proficiency(c.level);
+  const stats = characterStats(c);
   function changeWeapons(patch) {
     const next = { ...c, ...patch };
     const error = weaponChangeError(next, c);
@@ -836,20 +1097,9 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
     setError("");
     set("spells", spells);
   }
-  async function save() {
-    setBusy(true);
+  function save() {
     setError("");
-    try {
-      const result = await onSave(c);
-      setC((current) =>
-        JSON.stringify(current) === JSON.stringify(c) ? result : current,
-      );
-      setSaved(result);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
+    void autosave.flush();
   }
   function back() {
     if (
@@ -877,9 +1127,17 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
           <ArrowLeft size={15} /> My characters
         </button>
         <div className="top-actions">
-          <span className={dirty ? "save-status unsaved" : "save-status"}>
-            {dirty ? (
-              "Unsaved changes"
+          <span
+            role="status"
+            aria-live="polite"
+            className={dirty ? "save-status unsaved" : "save-status"}
+          >
+            {autosave.phase === "saving" ? (
+              "Saving…"
+            ) : autosave.phase === "error" && dirty ? (
+              "Not saved"
+            ) : dirty ? (
+              "Changes waiting to save…"
             ) : (
               <>
                 <Check size={13} /> All changes saved
@@ -907,6 +1165,12 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
           </button>
         </div>
       </div>
+      {autosave.error && dirty && (
+        <p className="error" role="alert">
+          Autosave failed: {autosave.error} Your edits are still here. Use Save
+          character to retry.
+        </p>
+      )}
       {error && (
         <p className="error" role="alert">
           {error}
@@ -960,9 +1224,8 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                   <span style={{ width: `${(c.hp / c.maxHp) * 100}%` }} />
                 </div>
                 <div className="hp-controls">
-                  <input
+                  <NumberInput
                     aria-label="Damage or healing amount"
-                    type="number"
                     min={1}
                     max={9999}
                     value={amount}
@@ -1017,39 +1280,40 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                 <div className="stat-label">
                   <Shield size={16} /> ARMOR CLASS
                 </div>
-                <input
+                <NumberInput
                   className="big-stat"
                   aria-label="Armor class"
-                  type="number"
                   min={0}
                   max={99}
-                  value={c.ac}
+                  value={stats.ac}
+                  readOnly={c.acMode === "auto"}
                   onChange={(e) =>
                     set("ac", Math.max(0, Math.min(99, Number(e.target.value))))
                   }
                 />
-                <span className="muted">Defense</span>
+                <span className="muted">
+                  {c.acMode === "auto"
+                    ? stats.acSource
+                    : "Manual AC · configure in Equipment"}
+                </span>
               </div>
               <button
                 className="stat-card roll-stat"
-                onClick={() => dice("Initiative", modifier(c.abilities[1]))}
+                onClick={() => dice("Initiative", stats.initiative)}
               >
                 <div className="stat-label">
                   <Dices size={16} /> INITIATIVE
                 </div>
-                <strong className="big-stat">
-                  {signed(modifier(c.abilities[1]))}
-                </strong>
+                <strong className="big-stat">{signed(stats.initiative)}</strong>
                 <span className="muted">Roll initiative ↗</span>
               </button>
               <div className="stat-card">
                 <div className="stat-label">
                   <Compass size={16} /> SPEED
                 </div>
-                <input
+                <NumberInput
                   className="big-stat"
                   aria-label="Speed in feet"
-                  type="number"
                   min={0}
                   max={999}
                   value={c.speed}
@@ -1073,8 +1337,7 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                   >
                     {signed(modifier(c.abilities[i]))}
                   </button>
-                  <input
-                    type="number"
+                  <NumberInput
                     min={1}
                     max={30}
                     aria-label={`${name} score`}
@@ -1121,18 +1384,9 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                         />
                         <span>{name.slice(0, 3).toUpperCase()}</span>
                         <button
-                          onClick={() =>
-                            dice(
-                              `${name} save`,
-                              modifier(c.abilities[i]) +
-                                (c.saves.includes(i) ? prof : 0),
-                            )
-                          }
+                          onClick={() => dice(`${name} save`, stats.saves[i])}
                         >
-                          {signed(
-                            modifier(c.abilities[i]) +
-                              (c.saves.includes(i) ? prof : 0),
-                          )}
+                          {signed(stats.saves[i])}
                         </button>
                       </label>
                     ))}
@@ -1160,29 +1414,16 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                         </span>
                         <button
                           className="skill-bonus"
-                          onClick={() =>
-                            dice(
-                              name,
-                              modifier(c.abilities[index]) +
-                                prof * (c.skills[name] || 0),
-                            )
-                          }
+                          onClick={() => dice(name, stats.skillBonuses[name])}
                         >
-                          {signed(
-                            modifier(c.abilities[index]) +
-                              prof * (c.skills[name] || 0),
-                          )}
+                          {signed(stats.skillBonuses[name])}
                         </button>
                       </div>
                     ))}
                   </div>
                   <div className="passive">
                     <span>Passive Perception</span>
-                    <strong>
-                      {10 +
-                        modifier(c.abilities[4]) +
-                        prof * (c.skills.Perception || 0)}
-                    </strong>
+                    <strong>{stats.passivePerception}</strong>
                   </div>
                 </section>
                 <OverviewSpells
@@ -1369,18 +1610,32 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                 onChange={(v) => set("gold", v)}
               />
               <p className="helper">
-                Check an item to mark it equipped. Record weight, attunement,
-                and properties in its details.
+                Browse the 2024 equipment catalog below, or add a custom item.
+                Check an owned item to mark it equipped. Equipped armor and
+                shields update automatic AC.
               </p>
               <button className="text-button" onClick={() => setTab("Weapons")}>
                 <Sword size={14} /> Manage weapons, ammunition & mastery
               </button>
             </section>
+            <StatSettings
+              character={c}
+              onChange={(patch) => setC((prev) => ({ ...prev, ...patch }))}
+            />
             <RecordList
               title="Equipment"
               type="inventory"
               items={c.inventory}
               onChange={(v) => set("inventory", v)}
+              addForm={
+                <React.Suspense
+                  fallback={
+                    <p className="helper">Opening equipment catalog…</p>
+                  }
+                >
+                  <EquipmentPicker character={c} onChange={changeWeapons} />
+                </React.Suspense>
+              }
             />
           </>
         )}
@@ -1419,9 +1674,12 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                   max={20}
                   onChange={(v) => set("level", v)}
                 />
+                <BackgroundPicker
+                  value={c.background}
+                  onChange={(value) => set("background", value)}
+                />
                 {[
                   ["species", "Species"],
-                  ["background", "Background"],
                   ["campaign", "Campaign"],
                   ["languages", "Languages"],
                   [
@@ -1491,7 +1749,7 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
             />
             <div className="journal-footer">
               <span>{c.notes.length.toLocaleString()} / 20,000 characters</span>
-              <span>Remember to save your character</span>
+              <span>Changes save automatically after a short pause</span>
             </div>
           </section>
         )}
@@ -2079,7 +2337,7 @@ function App() {
                         </span>
                         <span>
                           <Shield size={14} />
-                          {c.ac} AC
+                          {characterStats(c).ac} AC
                         </span>
                       </div>
                       <div className="card-bottom">

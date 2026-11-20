@@ -14,7 +14,13 @@
     "start": "node server/index.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:browser": "npm run build && node scripts/browser-check.mjs",
-    "format": "prettier --write src server shared scripts tests package.json vite.config.js index.html README.md"
+    "format": "prettier --write src server shared scripts tests package.json vite.config.js index.html README.md",
+    "test:autosave-browser": "npm run build && node scripts/autosave-browser-check.mjs",
+    "test:numeric-input-browser": "npm run build && node scripts/numeric-input-browser-check.mjs",
+    "test:backgrounds-browser": "npm run build && node scripts/backgrounds-browser-check.mjs",
+    "test:equipment-browser": "npm run build && node scripts/equipment-browser-check.mjs",
+    "test:starting-kit-browser": "npm run build && node scripts/starting-kit-browser-check.mjs",
+    "test:character-creation-browser": "npm run build && node scripts/character-creation-browser-check.mjs"
   },
   "dependencies": {
     "express": "^5.1.0",

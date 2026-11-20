@@ -1,3 +1,4 @@
+import NumberInput from "./NumberInput.jsx";
 import React, { useId, useState } from "react";
 import { Plus, Sword, Trash2, ChevronRight } from "lucide-react";
 import {
@@ -60,8 +61,7 @@ function Field({ label, children, ...props }) {
 function NumberField({ label, value, onChange, min = 0, max = 9999 }) {
   return (
     <Field label={label}>
-      <input
-        type="number"
+      <NumberInput
         min={min}
         max={max}
         value={value}
@@ -483,7 +483,9 @@ function WeaponEditor({ character: c, weapon: w, onChange, onRemove }) {
         )}
       </div>
       <details>
-        <summary>Edit weapon, bonuses & resources</summary>
+        <summary aria-label={`Edit ${w.name}`}>
+          Edit weapon, bonuses & resources
+        </summary>
         <div className="weapon-edit">
           <WeaponDefinition weapon={w} onChange={onChange} />
           <div className="form-grid">

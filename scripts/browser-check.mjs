@@ -6,6 +6,15 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { createApp } from "../server/app.mjs";
 import { setAdmin } from "../server/audit.mjs";
 
+async function saveCharacter(page) {
+  const button = page.getByRole("button", {
+    name: "Save character",
+    exact: true,
+  });
+  if (await button.isEnabled()) await button.click();
+  await page.getByText("All changes saved", { exact: true }).waitFor();
+}
+
 // An isolated database keeps QA accounts and characters out of the player's data.
 const { app, db, audit } = createApp({
   databasePath: ":memory:",
@@ -17,7 +26,7 @@ await new Promise((resolve) => server.once("listening", resolve));
 let browser;
 try {
   browser = await chromium.launch({
-    channel: "chrome",
+    channel: process.env.PLAYWRIGHT_BROWSER_CHANNEL || "chrome",
     headless: true,
     args: [
       "--host-resolver-rules=MAP character-keeper.test 127.0.0.1",
@@ -104,7 +113,7 @@ try {
     name: "Guide topics",
     exact: true,
   });
-  assert.equal(await guideTopics.getByRole("link").count(), 10);
+  assert.equal(await guideTopics.getByRole("link").count(), 12);
   assert.equal(
     await page
       .getByRole("heading", { name: "Administrator tools", exact: true })
@@ -367,9 +376,10 @@ try {
   await page
     .getByRole("button", { name: "Create your first character" })
     .click();
+  await page.getByLabel("Existing character", { exact: true }).check();
   await page.getByLabel("Character name", { exact: true }).fill("Mira Ashfall");
   await page.getByLabel("Class", { exact: true }).selectOption("Wizard");
-  await page.getByLabel("Background", { exact: true }).fill("Sage");
+  await page.getByLabel("Background", { exact: true }).selectOption("Sage");
   assert.equal(
     await page
       .getByLabel("Subclass", { exact: true })
@@ -403,11 +413,65 @@ try {
   await page.getByLabel("Level", { exact: true }).fill("1");
 
   await page.screenshot({ path: "artifacts/builder-dark.png" });
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "Create character", exact: true })
     .click();
   await page.getByRole("heading", { name: "Mira Ashfall" }).waitFor();
+  assert.equal(
+    await page.getByLabel("Armor class", { exact: true }).inputValue(),
+    "12",
+  );
+  await page.getByRole("button", { name: "Inventory", exact: true }).click();
+  const equipment = page.locator("section.panel").filter({
+    has: page.getByRole("heading", { name: "Equipment", exact: true }),
+  });
+  await equipment
+    .getByRole("button", { name: "Custom item", exact: true })
+    .click();
+  await equipment.getByLabel("Name", { exact: true }).fill("Half Plate +1");
+  await equipment
+    .getByRole("button", { name: "Add item", exact: true })
+    .click();
+  await page.getByLabel("Equip Half Plate +1", { exact: true }).check();
+  await page.getByLabel("Defense fighting style", { exact: false }).check();
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  assert.equal(
+    await page.getByLabel("Armor class", { exact: true }).inputValue(),
+    "19",
+  );
+  await saveCharacter(page);
+  await page.reload();
+  await page
+    .locator(".character-card")
+    .filter({ has: page.getByRole("heading", { name: "Mira Ashfall" }) })
+    .click();
+  await page.getByRole("heading", { name: "Mira Ashfall" }).waitFor();
+  assert.equal(
+    await page.getByLabel("Armor class", { exact: true }).inputValue(),
+    "19",
+  );
+  await page.getByRole("button", { name: "Inventory", exact: true }).click();
+  await page.getByLabel("Armor class mode").selectOption("manual");
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  await page.getByLabel("Armor class", { exact: true }).fill("16");
+  assert.equal(
+    await page.getByLabel("Armor class", { exact: true }).inputValue(),
+    "16",
+  );
+  await page.getByRole("button", { name: "Inventory", exact: true }).click();
+  await page.getByLabel("Armor class mode").selectOption("auto");
+  await page
+    .getByRole("button", { name: "Remove Half Plate +1", exact: true })
+    .click();
+  await page.getByLabel("Defense fighting style", { exact: false }).uncheck();
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
+  assert.equal(
+    await page.getByLabel("Armor class", { exact: true }).inputValue(),
+    "12",
+  );
   await page.getByLabel("Temporary HP", { exact: true }).fill("3");
   await page.getByLabel("Damage or healing amount").fill("5");
   await page.getByRole("button", { name: "− Damage", exact: true }).click();
@@ -590,6 +654,7 @@ try {
       .isChecked(),
   );
   await page.getByRole("button", { name: "Inventory", exact: true }).click();
+  await page.getByRole("button", { name: "Custom item", exact: true }).click();
   await page.getByLabel("Name", { exact: true }).fill("Spellbook");
   await page.getByRole("button", { name: "Add item", exact: true }).click();
   await page
@@ -599,9 +664,7 @@ try {
   await page
     .getByPlaceholder("Our story begins…")
     .fill("Found a silver key beneath the old oak.");
-  await page
-    .getByRole("button", { name: "Save character", exact: true })
-    .click();
+  await saveCharacter(page);
   await page.getByText("All changes saved", { exact: true }).waitFor();
   await page
     .getByRole("button", { name: "My characters", exact: true })
@@ -717,9 +780,7 @@ try {
     await page.getByLabel("Level 1", { exact: true }).isEditable(),
     false,
   );
-  await page
-    .getByRole("button", { name: "Save character", exact: true })
-    .click();
+  await saveCharacter(page);
   await page.getByText("All changes saved", { exact: true }).waitFor();
   await page
     .getByRole("button", { name: "My characters", exact: true })
@@ -913,9 +974,7 @@ try {
       })
       .isDisabled(),
   );
-  await page
-    .getByRole("button", { name: "Save character", exact: true })
-    .click();
+  await saveCharacter(page);
   await page.getByText("All changes saved", { exact: true }).waitFor();
   await page
     .getByRole("button", { name: "My characters", exact: true })
@@ -999,9 +1058,7 @@ try {
     await overviewSpells.locator(".cast-feedback").innerText(),
     /level 3 spell slot/,
   );
-  await page
-    .getByRole("button", { name: "Save character", exact: true })
-    .click();
+  await saveCharacter(page);
   await page.getByText("All changes saved", { exact: true }).waitFor();
   await page
     .getByRole("button", { name: "My characters", exact: true })
@@ -1135,7 +1192,7 @@ try {
   await page.getByLabel("Prepared spell limit", { exact: true }).fill("1");
   await page.getByRole("button", { name: "Overview", exact: true }).click();
   await page.getByTitle("Roll Strength", { exact: true }).click();
-  await page.getByRole("status").waitFor();
+  await page.locator(".roll-toast").waitFor();
   mkdirSync("artifacts", { recursive: true });
   await page.screenshot({
     path: "artifacts/character-desktop.png",

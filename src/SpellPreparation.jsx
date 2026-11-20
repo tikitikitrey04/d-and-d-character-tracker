@@ -1,3 +1,4 @@
+import NumberInput from "./NumberInput.jsx";
 import React, { useId } from "react";
 import {
   automaticPreparationLimits,
@@ -203,9 +204,8 @@ export default function SpellPreparation({ character: c, onChange }) {
           ].map(([key, label]) => (
             <div className="field" key={key}>
               <label htmlFor={`${id}-${key}`}>{label}</label>
-              <input
+              <NumberInput
                 id={`${id}-${key}`}
-                type="number"
                 min={0}
                 max={200}
                 value={c[key]}

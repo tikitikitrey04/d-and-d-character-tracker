@@ -1,3 +1,4 @@
+import NumberInput from "./NumberInput.jsx";
 import React, { useId } from "react";
 import { Sparkles } from "lucide-react";
 
@@ -54,9 +55,8 @@ export default function SpellSlots({ character: c, onChange }) {
           <div className="slot" key={i}>
             <div className="field">
               <label htmlFor={`${id}-${i}`}>Level {i + 1}</label>
-              <input
+              <NumberInput
                 id={`${id}-${i}`}
-                type="number"
                 min={0}
                 max={20}
                 value={slot.max}
