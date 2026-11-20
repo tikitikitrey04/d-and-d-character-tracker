@@ -1,3 +1,5 @@
+import PointBuy from "./PointBuy.jsx";
+import { pointBuyResult } from "../shared/point-buy.mjs";
 import BackgroundPicker from "./BackgroundPicker.jsx";
 import NumberInput from "./NumberInput.jsx";
 import React, { useEffect, useId, useRef, useState } from "react";
@@ -407,10 +409,22 @@ function Creator({ onClose, onCreate }) {
   const [draft, setDraft] = useState(blankCharacter),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
+    [characterType, setCharacterType] = useState(null),
+    [abilityMethod, setAbilityMethod] = useState("manual"),
+    [baseScores, setBaseScores] = useState(Array(6).fill(8)),
+    [boostMode, setBoostMode] = useState("split"),
+    [boostChoices, setBoostChoices] = useState([]),
     [includeStartingKit, setIncludeStartingKit] = useState(false),
-    [kitSelection, setKitSelection] = useState({});
+    [kitSelection, setKitSelection] = useState({}),
+    [page, setPage] = useState(1);
+  const pageHeading = useRef(null);
+  useEffect(() => {
+    pageHeading.current?.focus();
+    if (modalRef.current) modalRef.current.scrollTop = 0;
+  }, [page]);
   const set = (k, v) => {
     setDraft((c) => ({ ...c, [k]: v }));
+    if (k === "background") setBoostChoices([]);
     if (k === "class" || k === "background") {
       const prefix = k === "class" ? "class-" : "background-";
       setKitSelection((previous) => ({
@@ -426,13 +440,44 @@ function Creator({ onClose, onCreate }) {
   };
   async function submit(e) {
     e.preventDefault();
+    if (page < 3) {
+      if (
+        page === 1 &&
+        (!draft.name.trim() ||
+          !draft.species.trim() ||
+          (abilityMethod === "point-buy" && !draft.background.trim()))
+      ) {
+        setError(
+          "Enter a character name, species, and background before continuing. Existing characters using manual scores may leave background blank.",
+        );
+        return;
+      }
+      setError("");
+      setPage(page + 1);
+      return;
+    }
     setBusy(true);
     try {
+      if (!characterType)
+        throw new Error("Choose whether this is a new or existing character.");
+      const creationDraft = { ...draft };
+      if (abilityMethod === "point-buy") {
+        if (!draft.species.trim() || !draft.background.trim())
+          throw new Error(
+            "Choose a species and background before using point buy.",
+          );
+        creationDraft.abilities = pointBuyResult(
+          baseScores,
+          draft.background,
+          boostMode,
+          boostChoices,
+        ).final;
+      }
       const character = includeStartingKit
         ? (
             await import("../shared/starting-equipment.mjs")
-          ).applyStartingEquipment(draft, kitSelection)
-        : draft;
+          ).applyStartingEquipment(creationDraft, kitSelection)
+        : creationDraft;
       await onCreate(character);
     } catch (e) {
       setError(e.message);
@@ -464,97 +509,240 @@ function Creator({ onClose, onCreate }) {
         <p className="muted">
           Start with the essentials. You can fill in every detail on your sheet.
         </p>
-        <form onSubmit={submit}>
-          <Field
-            label="Character name"
-            value={draft.name}
-            onChange={(e) => set("name", e.target.value)}
-            placeholder="A name worth remembering"
-            required
-            maxLength={80}
-            autoFocus
-          />
-          <div className="form-grid">
-            <Field label="Class">
-              <select
-                value={draft.class}
-                onChange={(e) => set("class", e.target.value)}
+        <ol className="creator-steps" aria-label="Character creation progress">
+          {["Character details", "Starting equipment", "Ability scores"].map(
+            (label, index) => (
+              <li
+                key={label}
+                aria-current={page === index + 1 ? "step" : undefined}
               >
-                {classes.map((v) => (
-                  <option key={v}>{v}</option>
-                ))}
-              </select>
-            </Field>
-            <NumberField
-              label="Level"
-              value={draft.level}
-              onChange={(v) => set("level", v)}
-              min={1}
-              max={20}
-            />
-            <Field
-              label="Species"
-              value={draft.species}
-              onChange={(e) => set("species", e.target.value)}
-              maxLength={200}
-            />
-            <BackgroundPicker
-              value={draft.background}
-              onChange={(value) => set("background", value)}
-            />
-          </div>
-          <SubclassPicker
-            character={draft}
-            onChange={(value) => set("subclass", value)}
-          />
-          <Field
-            label="Campaign (optional)"
-            value={draft.campaign}
-            onChange={(e) => set("campaign", e.target.value)}
-            placeholder="Where will your story unfold?"
-            maxLength={200}
-          />
-          <fieldset className="starting-equipment-section">
-            <legend>Starting equipment</legend>
-            <label className="slot-override">
-              <input
-                type="checkbox"
-                checked={includeStartingKit}
-                onChange={(e) => setIncludeStartingKit(e.target.checked)}
-              />
-              Include starting equipment and gold
-            </label>
-            {includeStartingKit && (
-              <React.Suspense
-                fallback={<p className="helper">Loading starting kits…</p>}
-              >
-                <StartingEquipmentPicker
-                  character={draft}
-                  selection={kitSelection}
-                  onChange={setKitSelection}
-                />
-              </React.Suspense>
-            )}
-          </fieldset>
-          <div className="builder-note">
-            <BookOpen size={18} />
-            <p>
-              This is a manual 2024 sheet. Add your background’s bonuses to your
-              final ability scores, and enter your class features and HP after
-              creation. Use the optional starting kit above to populate gear and
-              gold, or add equipment manually on the sheet.
-            </p>
-          </div>
-          {error && (
-            <p className="error" role="alert">
-              {error}
-            </p>
+                {index + 1}. {label}
+              </li>
+            ),
           )}
-          <button className="primary wide" disabled={busy}>
-            {busy ? "Creating…" : "Create character"}
-            <Plus size={17} />
-          </button>
-        </form>
+        </ol>
+        <h3 ref={pageHeading} tabIndex={-1}>
+          Page {page} of 3:{" "}
+          {
+            [
+              "Character details",
+              "Starting equipment",
+              "Point buy & ability scores",
+            ][page - 1]
+          }
+        </h3>
+        {page === 1 && (
+          <fieldset className="character-type-choice">
+            <legend>Is this a new character?</legend>
+            {[
+              ["new", "New character"],
+              ["existing", "Existing character"],
+            ].map(([type, label]) => (
+              <label key={type}>
+                <input
+                  type="radio"
+                  name="character-type"
+                  value={type}
+                  checked={characterType === type}
+                  onChange={() => {
+                    setCharacterType(type);
+                    setIncludeStartingKit(type === "new");
+                    setAbilityMethod(type === "new" ? "point-buy" : "manual");
+                    setError("");
+                  }}
+                />{" "}
+                {label}
+              </label>
+            ))}
+            <p className="helper">
+              New characters start with point buy and starting equipment
+              enabled. Existing characters use manual scores and optional
+              equipment.
+            </p>
+          </fieldset>
+        )}
+        {characterType && (
+          <form onSubmit={submit}>
+            {page === 1 && (
+              <>
+                <Field
+                  label="Character name"
+                  value={draft.name}
+                  onChange={(e) => set("name", e.target.value)}
+                  placeholder="A name worth remembering"
+                  required
+                  maxLength={80}
+                  autoFocus
+                />
+                <div className="form-grid">
+                  <Field label="Class">
+                    <select
+                      value={draft.class}
+                      onChange={(e) => set("class", e.target.value)}
+                    >
+                      {classes.map((v) => (
+                        <option key={v}>{v}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <NumberField
+                    label="Level"
+                    value={draft.level}
+                    onChange={(v) => set("level", v)}
+                    min={1}
+                    max={20}
+                  />
+                  <Field
+                    label="Species"
+                    value={draft.species}
+                    onChange={(e) => set("species", e.target.value)}
+                    maxLength={200}
+                  />
+                  <BackgroundPicker
+                    value={draft.background}
+                    abilityScoresManaged={abilityMethod === "point-buy"}
+                    onChange={(value) => set("background", value)}
+                  />
+                </div>
+                <SubclassPicker
+                  character={draft}
+                  onChange={(value) => set("subclass", value)}
+                />
+                <Field
+                  label="Campaign (optional)"
+                  value={draft.campaign}
+                  onChange={(e) => set("campaign", e.target.value)}
+                  placeholder="Where will your story unfold?"
+                  maxLength={200}
+                />
+              </>
+            )}
+            {page === 2 && (
+              <>
+                <fieldset className="starting-equipment-section">
+                  <legend>Starting equipment</legend>
+                  <label className="slot-override">
+                    <input
+                      type="checkbox"
+                      checked={includeStartingKit}
+                      onChange={(e) => setIncludeStartingKit(e.target.checked)}
+                    />
+                    Include starting equipment and gold
+                  </label>
+                  {includeStartingKit && (
+                    <React.Suspense
+                      fallback={
+                        <p className="helper">Loading starting kits…</p>
+                      }
+                    >
+                      <StartingEquipmentPicker
+                        character={draft}
+                        selection={kitSelection}
+                        onChange={setKitSelection}
+                      />
+                    </React.Suspense>
+                  )}
+                </fieldset>
+              </>
+            )}
+            {page === 3 && (
+              <>
+                <fieldset className="creation-abilities">
+                  <legend>Ability scores</legend>
+                  <Field label="Ability score method">
+                    <select
+                      value={abilityMethod}
+                      onChange={(e) => setAbilityMethod(e.target.value)}
+                    >
+                      <option value="point-buy">
+                        Point buy (2024 · 27 points)
+                      </option>
+                      <option value="manual">Manual final scores</option>
+                    </select>
+                  </Field>
+                  {abilityMethod === "point-buy" ? (
+                    draft.class &&
+                    draft.species.trim() &&
+                    draft.background.trim() ? (
+                      <PointBuy
+                        character={draft}
+                        scores={baseScores}
+                        onScores={setBaseScores}
+                        boostMode={boostMode}
+                        onBoostMode={setBoostMode}
+                        boostChoices={boostChoices}
+                        onBoostChoices={setBoostChoices}
+                      />
+                    ) : (
+                      <p className="helper" role="status">
+                        Select your class, species, and background on page 1 to
+                        open point buy.
+                      </p>
+                    )
+                  ) : (
+                    <>
+                      <p className="helper">
+                        Enter final scores, including background increases and
+                        any other bonuses.
+                      </p>
+                      <div className="form-grid">
+                        {abilities.map((name, i) => (
+                          <NumberField
+                            key={name}
+                            label={`${name} final score`}
+                            value={draft.abilities[i]}
+                            min={1}
+                            max={30}
+                            onChange={(value) =>
+                              set(
+                                "abilities",
+                                draft.abilities.map((n, j) =>
+                                  i === j ? value : n,
+                                ),
+                              )
+                            }
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </fieldset>
+                <div className="builder-note">
+                  <BookOpen size={18} />
+                  <p>
+                    Point buy includes the selected background’s ability
+                    increases. Manual scores should already include bonuses.
+                    Enter class features and HP on the sheet, and review your
+                    starting equipment on page 2.
+                  </p>
+                </div>
+              </>
+            )}
+            {error && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
+            <div className="creator-navigation">
+              {page > 1 && (
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={busy}
+                  onClick={() => {
+                    setError("");
+                    setPage(page - 1);
+                  }}
+                >
+                  Back
+                </button>
+              )}
+              <button type="submit" className="primary" disabled={busy}>
+                {page < 3 ? "Next" : busy ? "Creating…" : "Create character"}
+              </button>
+            </div>
+          </form>
+        )}
       </section>
     </div>
   );

@@ -376,6 +376,7 @@ try {
   await page
     .getByRole("button", { name: "Create your first character" })
     .click();
+  await page.getByLabel("Existing character", { exact: true }).check();
   await page.getByLabel("Character name", { exact: true }).fill("Mira Ashfall");
   await page.getByLabel("Class", { exact: true }).selectOption("Wizard");
   await page.getByLabel("Background", { exact: true }).selectOption("Sage");
@@ -412,6 +413,8 @@ try {
   await page.getByLabel("Level", { exact: true }).fill("1");
 
   await page.screenshot({ path: "artifacts/builder-dark.png" });
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "Create character", exact: true })

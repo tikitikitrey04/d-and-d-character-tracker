@@ -31,17 +31,41 @@ try {
   await page
     .getByRole("button", { name: "Create your first character" })
     .click();
+  await page.getByLabel("New character", { exact: true }).check();
   await page.getByLabel("Character name", { exact: true }).fill("Starter hero");
-  const create = () =>
-    page
+  async function goToPage(target) {
+    let current = Number(
+      (
+        await page
+          .getByRole("dialog")
+          .getByRole("heading", { level: 3 })
+          .first()
+          .innerText()
+      ).match(/Page (\d)/)[1],
+    );
+    while (current !== target) {
+      await page
+        .getByRole("button", {
+          name: current < target ? "Next" : "Back",
+          exact: true,
+        })
+        .click();
+      current += current < target ? 1 : -1;
+    }
+  }
+  const create = async () => {
+    await goToPage(3);
+    await page
       .getByRole("dialog")
       .getByRole("button", { name: "Create character", exact: true })
       .click();
+  };
   const kitToggle = page.getByLabel("Include starting equipment and gold", {
     exact: true,
   });
-  assert.equal(await kitToggle.isChecked(), false);
+
   await page.getByLabel("Background", { exact: true }).selectOption("Soldier");
+  await goToPage(2);
   await kitToggle.check();
   await page
     .getByLabel("Class starting equipment", { exact: true })
@@ -60,7 +84,9 @@ try {
   await page
     .getByLabel("Background gaming set", { exact: true })
     .selectOption(dragonchess);
+  await goToPage(1);
   await page.getByLabel("Class", { exact: true }).selectOption("Paladin");
+  await goToPage(2);
   await preview
     .getByRole("heading", { name: "Starting gold: 23 GP", exact: true })
     .waitFor();
@@ -78,13 +104,19 @@ try {
     .getByLabel("Class holy symbol", { exact: true })
     .selectOption(emblem);
   const beforeSpecies = await preview.innerText();
+  await goToPage(1);
   await page.getByLabel("Species", { exact: true }).fill("Elf");
+  await goToPage(2);
   assert.equal(await preview.innerText(), beforeSpecies);
+  await goToPage(1);
   await page.getByLabel("Level", { exact: true }).fill("3");
+  await goToPage(2);
   await page
     .getByText("This is the normal level 1 kit.", { exact: false })
     .waitFor();
+  await goToPage(1);
   await page.getByLabel("Level", { exact: true }).fill("1");
+  await goToPage(2);
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM characters").get().n, 0);
   await page.setViewportSize({ width: 390, height: 844 });
   assert.equal(
@@ -132,11 +164,13 @@ try {
   await page
     .getByRole("button", { name: "Create character", exact: true })
     .click();
+  await page.getByLabel("New character", { exact: true }).check();
   await page.getByLabel("Character name", { exact: true }).fill("Gold hero");
   await page.getByLabel("Class", { exact: true }).selectOption("Bard");
   await page
     .getByLabel("Background", { exact: true })
     .selectOption("Entertainer");
+  await goToPage(2);
   await kitToggle.check();
   await page
     .getByLabel("Class starting equipment", { exact: true })
@@ -165,9 +199,11 @@ try {
   await page
     .getByRole("button", { name: "Create character", exact: true })
     .click();
+  await page.getByLabel("New character", { exact: true }).check();
   await page.getByLabel("Character name", { exact: true }).fill("Manual hero");
   await page.getByLabel("Class", { exact: true }).selectOption("Wizard");
   await page.getByLabel("Background", { exact: true }).selectOption("Sage");
+  await goToPage(2);
   await kitToggle.check();
   await preview.getByText("1 × Spellbook", { exact: true }).waitFor();
   await kitToggle.uncheck();
