@@ -603,96 +603,108 @@ function RecordList({ title, items, onChange, type, addForm, character }) {
   const update = (id, patch) =>
     onChange(items.map((i) => (i.id === id ? { ...i, ...patch } : i)));
   const renderRecord = (item) => (
-    <div className="record" key={item.id}>
-      <div className="record-main">
-        {type === "spells" && character && (
-          <SpellStatus
-            character={character}
-            spell={item}
-            onChange={(patch) => update(item.id, patch)}
-          />
-        )}
-        {type === "inventory" && (
-          <input
-            type="checkbox"
-            aria-label={`${type === "spells" ? "Prepare" : "Equip"} ${item.name}`}
-            checked={type === "spells" ? item.prepared : item.equipped}
-            onChange={(e) =>
-              update(item.id, {
-                [type === "spells" ? "prepared" : "equipped"]: e.target.checked,
-              })
-            }
-          />
-        )}
-        <div>
-          <strong>{item.name}</strong>
+    <div className="record-entry" key={item.id}>
+      <div className="record">
+        <div className="record-main">
           {type === "spells" && character && (
-            <SpellSource
+            <SpellStatus
               character={character}
               spell={item}
               onChange={(patch) => update(item.id, patch)}
             />
           )}
-          <p>
-            {type === "spells"
-              ? item.level === 0
-                ? "Cantrip"
-                : `Level ${item.level}`
-              : type === "inventory"
-                ? `Quantity ${item.quantity}`
-                : ""}
-            {item.detail &&
-              `${["spells", "inventory"].includes(type) ? " · " : ""}${item.detail}`}
-          </p>
+          {type === "inventory" && (
+            <input
+              type="checkbox"
+              aria-label={`${type === "spells" ? "Prepare" : "Equip"} ${item.name}`}
+              checked={type === "spells" ? item.prepared : item.equipped}
+              onChange={(e) =>
+                update(item.id, {
+                  [type === "spells" ? "prepared" : "equipped"]:
+                    e.target.checked,
+                })
+              }
+            />
+          )}
+          <div>
+            <strong>{item.name}</strong>
+            {type === "spells" && character && (
+              <SpellSource
+                character={character}
+                spell={item}
+                onChange={(patch) => update(item.id, patch)}
+              />
+            )}
+            <p>
+              {type === "spells"
+                ? item.level === 0
+                  ? "Cantrip"
+                  : `Level ${item.level}`
+                : type === "inventory"
+                  ? `Quantity ${item.quantity}`
+                  : ""}
+              {item.detail &&
+                `${["spells", "inventory"].includes(type) ? " · " : ""}${item.detail}`}
+            </p>
+          </div>
         </div>
+        {type === "resources" && (
+          <div className="stepper">
+            <button
+              type="button"
+              aria-label={`Restore ${item.name}`}
+              onClick={() =>
+                update(item.id, { used: Math.max(0, item.used - 1) })
+              }
+            >
+              <Plus size={13} />
+            </button>
+            <span>
+              {item.max - item.used} / {item.max}
+            </span>
+            <button
+              type="button"
+              aria-label={`Use ${item.name}`}
+              onClick={() =>
+                update(item.id, { used: Math.min(item.max, item.used + 1) })
+              }
+            >
+              <Minus size={13} />
+            </button>
+          </div>
+        )}
+        {type === "inventory" && (
+          <NumberInput
+            className="quantity"
+            aria-label={`${item.name} quantity`}
+            min={0}
+            max={9999}
+            value={item.quantity}
+            onChange={(e) =>
+              update(item.id, {
+                quantity: Math.max(0, Math.min(9999, Number(e.target.value))),
+              })
+            }
+          />
+        )}
+        <button
+          type="button"
+          className="icon-button danger"
+          aria-label={`Remove ${item.name}`}
+          onClick={() => onChange(items.filter((i) => i.id !== item.id))}
+        >
+          <Trash2 size={15} />
+        </button>
       </div>
-      {type === "resources" && (
-        <div className="stepper">
-          <button
-            type="button"
-            aria-label={`Restore ${item.name}`}
-            onClick={() =>
-              update(item.id, { used: Math.max(0, item.used - 1) })
-            }
-          >
-            <Plus size={13} />
-          </button>
-          <span>
-            {item.max - item.used} / {item.max}
-          </span>
-          <button
-            type="button"
-            aria-label={`Use ${item.name}`}
-            onClick={() =>
-              update(item.id, { used: Math.min(item.max, item.used + 1) })
-            }
-          >
-            <Minus size={13} />
-          </button>
-        </div>
-      )}
-      {type === "inventory" && (
-        <NumberInput
-          className="quantity"
-          aria-label={`${item.name} quantity`}
-          min={0}
-          max={9999}
-          value={item.quantity}
-          onChange={(e) =>
-            update(item.id, {
-              quantity: Math.max(0, Math.min(9999, Number(e.target.value))),
-            })
-          }
+      {["inventory", "spells"].includes(type) && (
+        <RecordEditor
+          item={item}
+          type={type}
+          items={items}
+          character={character}
+          onSave={(next) => update(item.id, next)}
         />
       )}
-      <button
-        type="button"
-        className="icon-button danger"
-        aria-label={`Remove ${item.name}`}
-        onClick={() => onChange(items.filter((i) => i.id !== item.id))}
-      >
-        <Trash2 size={15} />
-      </button>
     </div>
   );
   return (
