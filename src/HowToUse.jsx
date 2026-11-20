@@ -7,22 +7,31 @@ const sections = [
     steps: [
       <>
         From <strong>My characters</strong>, choose{" "}
-        <strong>Create character</strong>. Enter a name, class, level, species,
-        background, and an optional campaign. The background picker lists the 16
-        options from the 2024 Player’s Handbook, with ability options, origin
-        feat, skills, and tool proficiency. Use Custom / other source for
-        homebrew or older backgrounds.
+        <strong>Create character</strong>. Choose New character or Existing
+        character, then enter a name, class, level, species, background, and an
+        optional campaign. The background picker lists the 16 options from the
+        2024 Player’s Handbook, with ability options, origin feat, skills, and
+        tool proficiency. Use Custom / other source for homebrew or older
+        backgrounds.
       </>,
       <>
-        Optionally enable <strong>Include starting equipment and gold</strong>.
-        Choose class and background packages or gold alternatives, review any
-        tool choices, and check the preview before creating the character. Core
-        2024 species grant traits rather than separate equipment kits.
+        Starting equipment is enabled by default for a New character; uncheck
+        <strong> Include starting equipment and gold</strong> to opt out.
+        Existing characters default to no starting kit. Choose class and
+        background packages or gold alternatives, review any tool choices, and
+        check the preview before creating the character. Core 2024 species grant
+        traits rather than separate equipment kits.
       </>,
       <>
-        Open the character and enter your final ability scores, HP, speed, and
-        proficiencies in <strong>Overview</strong>. Use the scores after
-        applying your character creation bonuses.
+        For a new character, select species and background to open 27-point buy.
+        Open Point-buy help for the costs and rules. Background increases are
+        included in the final scores. Choose Manual final scores for rolled
+        scores or an existing character.
+      </>,
+      <>
+        Open the character to review ability scores and enter HP, speed, and
+        proficiencies in <strong>Overview</strong>. Point-buy scores already
+        include background increases; manual scores should include all bonuses.
       </>,
       <>
         Add class features in <strong>Features</strong>, limited-use resources

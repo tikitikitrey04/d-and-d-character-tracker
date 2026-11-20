@@ -5,7 +5,11 @@ import {
   backgroundReference,
 } from "../shared/backgrounds.mjs";
 
-export default function BackgroundPicker({ value, onChange }) {
+export default function BackgroundPicker({
+  value,
+  onChange,
+  abilityScoresManaged = false,
+}) {
   const id = useId();
   const [custom, setCustom] = useState(false);
   const background = officialBackground(value);
@@ -76,11 +80,12 @@ export default function BackgroundPicker({ value, onChange }) {
           </>
         )}
         <p>
-          Selecting a background records its name. Apply ability increases and
-          skill proficiencies in Overview, record the origin feat and tool
-          proficiency in Features, and add starting gear or gold in Inventory.
-          For Alert, enable the trait under Inventory; add Magic Initiate spells
-          as feature grants in Spells.
+          {abilityScoresManaged
+            ? "Point buy on page 3 applies the background’s ability increases. Record skill proficiencies in Overview, "
+            : "Selecting a background records its name. Apply ability increases and skill proficiencies in Overview, "}
+          record the origin feat and tool proficiency in Features, and add
+          starting gear or gold in Inventory. For Alert, enable the trait under
+          Inventory; add Magic Initiate spells as feature grants in Spells.
         </p>
       </div>
     </div>

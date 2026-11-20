@@ -31,9 +31,12 @@ try {
   await page
     .getByRole("button", { name: "Create your first character" })
     .click();
+  await page.getByLabel("Existing character", { exact: true }).check();
   await page
     .getByLabel("Character name", { exact: true })
     .fill("Autosaved hero");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "Create character", exact: true })
