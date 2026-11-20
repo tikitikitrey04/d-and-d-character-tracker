@@ -1,3 +1,4 @@
+import RecordEditor from "./RecordEditor.jsx";
 import PointBuy from "./PointBuy.jsx";
 import { pointBuyResult } from "../shared/point-buy.mjs";
 import BackgroundPicker from "./BackgroundPicker.jsx";
