@@ -1,3 +1,4 @@
+import EquipmentAttribution from "./EquipmentAttribution.jsx";
 import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -303,6 +304,7 @@ export default function PrintableCharacter({ character: c }) {
         <Prose>{c.notes}</Prose>
       </Section>
       <footer className="print-footer">
+        {c.inventory.length > 0 && <EquipmentAttribution />}
         {c.spells.length > 0 && <SpellAttribution />}
         {(c.weapons || []).length > 0 && <WeaponAttribution />}
         {c.name || "Character"} · Character Keeper · D&D 5e (2024)

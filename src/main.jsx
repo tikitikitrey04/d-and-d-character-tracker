@@ -1,3 +1,4 @@
+import BackgroundPicker from "./BackgroundPicker.jsx";
 import NumberInput from "./NumberInput.jsx";
 import React, { useEffect, useId, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -86,6 +87,10 @@ function downloadCharacter(character) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+const StartingEquipmentPicker = React.lazy(
+  () => import("./StartingEquipmentPicker.jsx"),
+);
+const EquipmentPicker = React.lazy(() => import("./EquipmentPicker.jsx"));
 const SpellPicker = React.lazy(() => import("./SpellPicker.jsx"));
 
 async function api(path, options = {}) {
@@ -401,13 +406,34 @@ function Creator({ onClose, onCreate }) {
   }, [onClose]);
   const [draft, setDraft] = useState(blankCharacter),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
-  const set = (k, v) => setDraft((c) => ({ ...c, [k]: v }));
+    [error, setError] = useState(""),
+    [includeStartingKit, setIncludeStartingKit] = useState(false),
+    [kitSelection, setKitSelection] = useState({});
+  const set = (k, v) => {
+    setDraft((c) => ({ ...c, [k]: v }));
+    if (k === "class" || k === "background") {
+      const prefix = k === "class" ? "class-" : "background-";
+      setKitSelection((previous) => ({
+        ...previous,
+        [k === "class" ? "classOption" : "backgroundOption"]: undefined,
+        choices: Object.fromEntries(
+          Object.entries(previous.choices || {}).filter(
+            ([key]) => !key.startsWith(prefix),
+          ),
+        ),
+      }));
+    }
+  };
   async function submit(e) {
     e.preventDefault();
     setBusy(true);
     try {
-      await onCreate(draft);
+      const character = includeStartingKit
+        ? (
+            await import("../shared/starting-equipment.mjs")
+          ).applyStartingEquipment(draft, kitSelection)
+        : draft;
+      await onCreate(character);
     } catch (e) {
       setError(e.message);
       setBusy(false);
@@ -472,12 +498,9 @@ function Creator({ onClose, onCreate }) {
               onChange={(e) => set("species", e.target.value)}
               maxLength={200}
             />
-            <Field
-              label="Background"
+            <BackgroundPicker
               value={draft.background}
-              onChange={(e) => set("background", e.target.value)}
-              placeholder="e.g. Soldier, Sage"
-              maxLength={200}
+              onChange={(value) => set("background", value)}
             />
           </div>
           <SubclassPicker
@@ -491,12 +514,35 @@ function Creator({ onClose, onCreate }) {
             placeholder="Where will your story unfold?"
             maxLength={200}
           />
+          <fieldset className="starting-equipment-section">
+            <legend>Starting equipment</legend>
+            <label className="slot-override">
+              <input
+                type="checkbox"
+                checked={includeStartingKit}
+                onChange={(e) => setIncludeStartingKit(e.target.checked)}
+              />
+              Include starting equipment and gold
+            </label>
+            {includeStartingKit && (
+              <React.Suspense
+                fallback={<p className="helper">Loading starting kits…</p>}
+              >
+                <StartingEquipmentPicker
+                  character={draft}
+                  selection={kitSelection}
+                  onChange={setKitSelection}
+                />
+              </React.Suspense>
+            )}
+          </fieldset>
           <div className="builder-note">
             <BookOpen size={18} />
             <p>
               This is a manual 2024 sheet. Add your background’s bonuses to your
-              final ability scores, and enter your class features, HP, and
-              equipment after creation.
+              final ability scores, and enter your class features and HP after
+              creation. Use the optional starting kit above to populate gear and
+              gold, or add equipment manually on the sheet.
             </p>
           </div>
           {error && (
@@ -1364,8 +1410,9 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                 onChange={(v) => set("gold", v)}
               />
               <p className="helper">
-                Check an item to mark it equipped. Record weight, attunement,
-                and properties in its details.
+                Browse the 2024 equipment catalog below, or add a custom item.
+                Check an owned item to mark it equipped. Equipped armor and
+                shields update automatic AC.
               </p>
               <button className="text-button" onClick={() => setTab("Weapons")}>
                 <Sword size={14} /> Manage weapons, ammunition & mastery
@@ -1380,6 +1427,15 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
               type="inventory"
               items={c.inventory}
               onChange={(v) => set("inventory", v)}
+              addForm={
+                <React.Suspense
+                  fallback={
+                    <p className="helper">Opening equipment catalog…</p>
+                  }
+                >
+                  <EquipmentPicker character={c} onChange={changeWeapons} />
+                </React.Suspense>
+              }
             />
           </>
         )}
@@ -1418,9 +1474,12 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
                   max={20}
                   onChange={(v) => set("level", v)}
                 />
+                <BackgroundPicker
+                  value={c.background}
+                  onChange={(value) => set("background", value)}
+                />
                 {[
                   ["species", "Species"],
-                  ["background", "Background"],
                   ["campaign", "Campaign"],
                   ["languages", "Languages"],
                   [
