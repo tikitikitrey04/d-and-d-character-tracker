@@ -121,7 +121,6 @@ try {
     true,
   );
   await page.reload();
-  await page.locator(".character-card").click();
   await page.getByRole("button", { name: "Inventory", exact: true }).click();
   assert.equal(
     await page.getByLabel("Equip Plate Armor", { exact: true }).isChecked(),

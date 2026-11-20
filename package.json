@@ -20,7 +20,8 @@
     "test:backgrounds-browser": "npm run build && node scripts/backgrounds-browser-check.mjs",
     "test:equipment-browser": "npm run build && node scripts/equipment-browser-check.mjs",
     "test:starting-kit-browser": "npm run build && node scripts/starting-kit-browser-check.mjs",
-    "test:character-creation-browser": "npm run build && node scripts/character-creation-browser-check.mjs"
+    "test:character-creation-browser": "npm run build && node scripts/character-creation-browser-check.mjs",
+    "test:navigation-browser": "npm run build && node scripts/navigation-browser-check.mjs"
   },
   "dependencies": {
     "express": "^5.1.0",

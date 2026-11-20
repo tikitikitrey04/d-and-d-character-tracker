@@ -69,10 +69,6 @@ try {
   assert.equal(writes.length, 1);
   assert.equal(writes[0].notes, "latest draft");
   await page.reload();
-  await page
-    .locator(".character-card")
-    .filter({ hasText: "Autosaved hero" })
-    .click();
   await page.getByRole("button", { name: "Journal", exact: true }).click();
   assert.equal(await journal.inputValue(), "latest draft");
 
@@ -106,10 +102,6 @@ try {
     .click();
   await page.getByText("All changes saved", { exact: true }).waitFor();
   await page.reload();
-  await page
-    .locator(".character-card")
-    .filter({ hasText: "Autosaved hero" })
-    .click();
   await page.getByRole("button", { name: "Journal", exact: true }).click();
   assert.equal(await journal.inputValue(), "retain after failure");
   await page.setViewportSize({ width: 390, height: 844 });

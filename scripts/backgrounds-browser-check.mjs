@@ -70,7 +70,6 @@ try {
   const { id: savedId, updated: savedAt, ...sheet } = after;
   assert.deepEqual(sheet, { ...before, background: "Guard" });
   await page.reload();
-  await page.locator(".character-card").click();
   await page.getByRole("button", { name: "Features", exact: true }).click();
   assert.equal(
     await page.getByLabel("Background", { exact: true }).inputValue(),
@@ -80,7 +79,6 @@ try {
   await page.getByLabel("Custom background name").fill("Urchin");
   await page.getByText("All changes saved", { exact: true }).waitFor();
   await page.reload();
-  await page.locator(".character-card").click();
   await page.getByRole("button", { name: "Features", exact: true }).click();
   assert.equal(
     await page.getByLabel("Custom background name").inputValue(),

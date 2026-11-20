@@ -153,7 +153,6 @@ try {
     saved.inventory.some((i) => i.name.includes("Holy Symbol (Emblem)")),
   );
   await page.reload();
-  await page.locator(".character-card").click();
   assert.equal(
     await page.getByLabel("Armor class", { exact: true }).inputValue(),
     "18",

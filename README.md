@@ -288,3 +288,7 @@ Open **Point-buy help** for the cost table and rules explanation. In the 2024 ru
 The character builder uses three pages: **1. Character details** (new/existing, name, class, species, background, subclass, level, campaign), **2. Starting equipment**, and **3. Point buy & ability scores**. Back and Next preserve draft choices. Only page 3 creates the character; existing characters can enter manual final scores there.
 
 Point buy includes a house-rule extension: each base-score step below 8 refunds one point, down to a minimum score of 1. For example, a score of 6 adds 2 points to the normal 27-point allowance. The budget display separates refunds from purchase spending; raising reduced scores spends their refunds back. Base scores still cap at 15. Standard 2024 point buy itself has a minimum of 8; the help panel identifies this extension.
+
+### Reloading pages
+
+The current app page, character ID, and sheet tab are retained in the URL. Reloads restore that location after authentication and character loading. Deleted, archived, or inaccessible character links fall back to My characters; admin pages require the current account’s admin role. Sign-out clears the current location. Popups, including character creation, are not restored.

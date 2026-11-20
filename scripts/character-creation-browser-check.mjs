@@ -189,7 +189,6 @@ try {
   assert.deepEqual(saved("Wizard hero").inventory, []);
   assert.equal(saved("Wizard hero").species, "Elf");
   await page.reload();
-  await page.locator(".character-card").click();
   assert.equal(
     await page.getByLabel("Constitution score", { exact: true }).inputValue(),
     "14",

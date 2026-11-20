@@ -1,3 +1,5 @@
+import RecordEditor from "./RecordEditor.jsx";
+import { readNavigation, navigationUrl } from "../shared/navigation.mjs";
 import PointBuy from "./PointBuy.jsx";
 import { pointBuyResult } from "../shared/point-buy.mjs";
 import BackgroundPicker from "./BackgroundPicker.jsx";
@@ -1012,9 +1014,17 @@ function RecordList({ title, items, onChange, type, addForm, character }) {
     </section>
   );
 }
-function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
+function Sheet({
+  character,
+  onSave,
+  onBack,
+  onDelete,
+  onArchive,
+  tab,
+  onTabChange,
+}) {
+  const setTab = onTabChange;
   const [c, setC] = useState(() => normalizeCharacterSlots(character)),
-    [tab, setTab] = useState("Overview"),
     [actionBusy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [saved, setSaved] = useState(() => normalizeCharacterSlots(character)),
@@ -1819,6 +1829,8 @@ function Sheet({ character, onSave, onBack, onDelete, onArchive }) {
 }
 function App() {
   const [page, setPage] = useState("characters");
+  const [sheetTab, setSheetTab] = useState("Overview");
+  const [navigationReady, setNavigationReady] = useState(false);
   const importInput = useRef(null);
   const [importing, setImporting] = useState(false);
   async function importFile(event) {
@@ -1857,14 +1869,44 @@ function App() {
       .finally(() => setLoading(false));
   }, []);
   useEffect(() => {
-    if (user)
-      Promise.all([api("/characters"), api("/characters?archived=true")])
-        .then(([active, archived]) => {
-          setCharacters(active);
-          setArchivedCharacters(archived);
-        })
-        .catch((e) => setError(e.message));
+    if (!user) return;
+    let cancelled = false;
+    setNavigationReady(false);
+    Promise.all([api("/characters"), api("/characters?archived=true")])
+      .then(([active, archived]) => {
+        if (cancelled) return;
+        const route = readNavigation(window.location.search, user.isAdmin);
+        setCharacters(active);
+        setArchivedCharacters(archived);
+        setPage(route.page);
+        setSelected(active.find((c) => c.id === route.character) || null);
+        setSheetTab(route.tab);
+        setNavigationReady(true);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setError(e.message);
+          setNavigationReady(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
+  useEffect(() => {
+    if (!user || !navigationReady) return;
+    const url = navigationUrl(window.location.href, {
+      page,
+      character: selected?.id,
+      tab: sheetTab,
+    });
+    window.history.replaceState(window.history.state, "", url);
+  }, [user, navigationReady, page, selected?.id, sheetTab]);
+  function openCharacter(c) {
+    setSheetTab("Overview");
+    setPage("characters");
+    setSelected(c);
+  }
   async function create(c) {
     const saved = await api("/characters", {
       method: "POST",
@@ -1872,7 +1914,7 @@ function App() {
     });
     setCharacters((prev) => [saved, ...prev]);
     setCreating(false);
-    setSelected(saved);
+    openCharacter(saved);
   }
   async function save(c) {
     const saved = await api(`/characters/${c.id}`, {
@@ -1914,6 +1956,13 @@ function App() {
       return;
     try {
       await api("/logout", { method: "POST" });
+      window.history.replaceState(
+        window.history.state,
+        "",
+        navigationUrl(window.location.href),
+      );
+      setNavigationReady(false);
+      setCreating(false);
       setUser(null);
       setPage("characters");
       setSelected(null);
@@ -1923,7 +1972,7 @@ function App() {
       setError(e.message);
     }
   }
-  if (loading)
+  if (loading || (user && !navigationReady))
     return (
       <div className="loading">
         <Dices size={36} />
@@ -2195,6 +2244,8 @@ function App() {
           <Sheet
             key={selected.id}
             character={selected}
+            tab={sheetTab}
+            onTabChange={setSheetTab}
             onSave={save}
             onDelete={remove}
             onArchive={archive}
@@ -2316,7 +2367,7 @@ function App() {
                   <button
                     className="character-card"
                     key={c.id}
-                    onClick={() => setSelected(c)}
+                    onClick={() => openCharacter(c)}
                   >
                     <div className={`card-portrait ${c.class.toLowerCase()}`}>
                       <Sword size={58} strokeWidth={0.8} />

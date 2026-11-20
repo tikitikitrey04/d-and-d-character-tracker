@@ -80,7 +80,7 @@ try {
   assert.equal(await adjustment.inputValue(), "0");
   await page.getByText("All changes saved", { exact: true }).waitFor();
   await page.reload();
-  await page.locator(".character-card").click();
+  await page.getByRole("button", { name: "Overview", exact: true }).click();
   assert.equal(await page.getByLabel("Speed in feet").inputValue(), "30");
   assert.equal(
     await page.getByLabel("Maximum HP", { exact: true }).inputValue(),

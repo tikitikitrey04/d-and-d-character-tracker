@@ -444,10 +444,6 @@ try {
   );
   await saveCharacter(page);
   await page.reload();
-  await page
-    .locator(".character-card")
-    .filter({ has: page.getByRole("heading", { name: "Mira Ashfall" }) })
-    .click();
   await page.getByRole("heading", { name: "Mira Ashfall" }).waitFor();
   assert.equal(
     await page.getByLabel("Armor class", { exact: true }).inputValue(),
@@ -1362,6 +1358,12 @@ try {
   await page.screenshot({ path: "artifacts/character-archive-desktop.png" });
   await page.reload();
   await page
+    .getByRole("heading", { name: "Character archive", exact: true })
+    .waitFor();
+  await page
+    .getByRole("button", { name: "Back to characters", exact: true })
+    .click();
+  await page
     .getByRole("heading", {
       name: "Your first chapter is unwritten.",
       exact: true,
@@ -1459,6 +1461,12 @@ try {
     .getByRole("heading", { name: "Mira imported", exact: true })
     .waitFor();
   await page.reload();
+  await page
+    .getByRole("heading", { name: "Mira imported", exact: true })
+    .waitFor();
+  await page
+    .getByRole("button", { name: "My characters", exact: true })
+    .click();
   await page.getByRole("heading", { name: "My characters." }).waitFor();
   assert.equal(
     await page

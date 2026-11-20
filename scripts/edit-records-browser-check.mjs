@@ -183,7 +183,6 @@ try {
   assert.equal(saved.weapons[0].damageDice, "2d6");
   assert.equal(saved.weapons[0].equipped, true);
   await page.reload();
-  await page.locator(".character-card").click();
   await page.getByRole("button", { name: "Inventory", exact: true }).click();
   await page
     .getByRole("button", { name: "Edit Leather +1", exact: true })
