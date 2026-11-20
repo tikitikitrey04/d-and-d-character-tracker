@@ -179,7 +179,10 @@ export function validateCharacter(c) {
   }
   if (
     !c.inventory.every(
-      (i) => int(i.quantity, 0, 9999) && typeof i.equipped === "boolean",
+      (i) =>
+        int(i.quantity, 0, 9999) &&
+        typeof i.equipped === "boolean" &&
+        (i.catalogKey === undefined || str(i.catalogKey, 100)),
     )
   )
     return false;

@@ -8,7 +8,16 @@ const sections = [
       <>
         From <strong>My characters</strong>, choose{" "}
         <strong>Create character</strong>. Enter a name, class, level, species,
-        background, and an optional campaign.
+        background, and an optional campaign. The background picker lists the 16
+        options from the 2024 Player’s Handbook, with ability options, origin
+        feat, skills, and tool proficiency. Use Custom / other source for
+        homebrew or older backgrounds.
+      </>,
+      <>
+        Optionally enable <strong>Include starting equipment and gold</strong>.
+        Choose class and background packages or gold alternatives, review any
+        tool choices, and check the preview before creating the character. Core
+        2024 species grant traits rather than separate equipment kits.
       </>,
       <>
         Open the character and enter your final ability scores, HP, speed, and
@@ -36,7 +45,9 @@ const sections = [
         Heroic Inspiration, death saves, abilities, skills, and saving throws.
       </>,
       <>
-        Use <strong>Inventory</strong> for general gear and currency,{" "}
+        Use <strong>Inventory</strong> to search the 2024 equipment catalog, add
+        custom gear, and track currency. Catalog weapons go to the armory;
+        equipped armor and shields update automatic AC. Use{" "}
         <strong>Features</strong> for class features and traits, and{" "}
         <strong>Journal</strong> for adventure notes.
       </>,

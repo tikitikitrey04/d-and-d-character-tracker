@@ -2794,17 +2794,64 @@ textarea {
   background: var(--dark-soft, #f0f4ec);
 }
 
-.record-entry {
+.background-picker {
+  grid-column: 1 / -1;
+}
+.background-picker .helper p {
+  margin-bottom: 8px;
+}
+
+.equipment-preview {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 14px;
+  margin: 12px 0;
+}
+.equipment-preview h4 {
+  margin: 0 0 8px;
+}
+.equipment-preview p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+  font-size: 12px;
+  margin: 0;
+}
+.equipment-service-list {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.starting-equipment-section {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin: 18px 0;
+  padding: 14px;
   min-width: 0;
 }
-.record-editor {
-  padding: 1rem;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  margin-top: 0.5rem;
+.starting-equipment-section legend {
+  font-weight: 600;
+  padding: 0 6px;
 }
-.record-editor-actions {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
+.starting-kit-preview {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin: 12px 0;
+}
+.starting-kit-preview h4 {
+  margin: 0 0 8px;
+}
+.starting-kit-preview ul {
+  padding-left: 20px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .starting-equipment-picker .form-grid {
+    grid-template-columns: 1fr;
+  }
 }

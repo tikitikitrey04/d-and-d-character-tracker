@@ -378,7 +378,7 @@ try {
     .click();
   await page.getByLabel("Character name", { exact: true }).fill("Mira Ashfall");
   await page.getByLabel("Class", { exact: true }).selectOption("Wizard");
-  await page.getByLabel("Background", { exact: true }).fill("Sage");
+  await page.getByLabel("Background", { exact: true }).selectOption("Sage");
   assert.equal(
     await page
       .getByLabel("Subclass", { exact: true })
@@ -425,6 +425,9 @@ try {
   const equipment = page.locator("section.panel").filter({
     has: page.getByRole("heading", { name: "Equipment", exact: true }),
   });
+  await equipment
+    .getByRole("button", { name: "Custom item", exact: true })
+    .click();
   await equipment.getByLabel("Name", { exact: true }).fill("Half Plate +1");
   await equipment
     .getByRole("button", { name: "Add item", exact: true })
@@ -648,6 +651,7 @@ try {
       .isChecked(),
   );
   await page.getByRole("button", { name: "Inventory", exact: true }).click();
+  await page.getByRole("button", { name: "Custom item", exact: true }).click();
   await page.getByLabel("Name", { exact: true }).fill("Spellbook");
   await page.getByRole("button", { name: "Add item", exact: true }).click();
   await page
